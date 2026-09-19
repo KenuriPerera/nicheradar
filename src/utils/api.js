@@ -35,3 +35,11 @@ export async function getHashtags(niche) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Hashtag fetch failed')
   return res.json()
 }
+
+const handle = async (res) => {
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed')
+  return res.json()
+}
+
+export const getHistory = (niche, days = 14) =>
+  fetch(`/api/history?niche=${niche}&days=${days}`).then(handle)

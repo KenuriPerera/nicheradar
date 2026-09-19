@@ -6,6 +6,7 @@ import {
   extractHashtags, predictViralHashtags,
   scoreNiche, NICHE_MAP
 } from './_data.js'
+import { saveSnapshot, dbAvailable } from './_db.js'
 
 export default async function handler(req, res) {
   cors(res)
@@ -36,8 +37,14 @@ export default async function handler(req, res) {
   const predicted = predictViralHashtags(raw, niche)
   const scores    = scoreNiche(redditData, ytVideos)
 
+  const hasDB = await dbAvailable()
+  if (hasDB) {
+    saveSnapshot(niche, predicted).catch(() => {})
+  }
+
   res.status(200).json({
     niche,
+    savedToDB: hasDB,
     fetchedAt:  new Date().toISOString(),
     totalSources: titledPosts.length,
     viralScore: scores.viralScore,

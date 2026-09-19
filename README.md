@@ -1,110 +1,101 @@
 # NicheRadar
 
 AI-powered viral trend intelligence for TikTok & Instagram creators.
-Built with React (Vite) + Vercel Serverless + free live data APIs + Claude AI.
+Built with React (Vite) + Netlify Functions + Supabase + free live data APIs.
 
 ---
 
-## How data works (free tier architecture)
+## What it does
 
-```
-Reddit API (free, no key)  ──┐
-                              ├──▶  Vercel backend  ──▶  Claude Haiku (synthesis)  ──▶  UI
-YouTube Data API (free key) ──┘
-```
-
-- Reddit and YouTube fetch live data for free — no scraping limits
-- Claude Haiku only synthesizes/scores the data (not searching) — ~$0.0003 per call
-- No TikTok/Instagram API needed — YouTube signals closely mirror both platforms
+- Dashboard — live viral scores across all your niches
+- Analyze — deep hashtag, audio, format and timing analysis
+- Compare — TikTok vs Instagram head-to-head for any niche
+- Hashtags — live hashtag extraction and viral prediction
+- History — track how hashtag viral scores change over time
 
 ---
 
-## What's free and what's not
+## Tech stack
 
-| Source         | Cost       | What it gives you                        |
-|----------------|------------|------------------------------------------|
-| Reddit API     | Free       | Hot posts, engagement, community trends  |
-| YouTube API    | Free*      | Trending videos, titles, channels        |
-| Claude Haiku   | ~$0.0003/call | Scores, predictions, format advice  |
-| Vercel hosting | Free       | Serverless deployment, auto-scaling      |
-| GitHub         | Free       | Version control, CI/CD trigger           |
-
-*YouTube: 10,000 units/day free. Each search = 100 units → 100 free trend checks/day.
+| Layer | Technology | Cost |
+|---|---|---|
+| Frontend | React + Vite | Free |
+| Hosting | Netlify | Free |
+| Functions | Netlify Serverless | Free |
+| Database | Supabase Postgres | Free |
+| Data sources | Reddit API + YouTube Data API | Free |
 
 ---
 
-## Deploy in 5 steps
+## Data sources
 
-### 1. Push to GitHub
-```bash
-git init
-git add .
-git commit -m "init: NicheRadar"
-git remote add origin https://github.com/YOUR_USERNAME/nicheradar.git
-git push -u origin main
-```
+- Reddit API — no key needed, live data
+- YouTube Data API v3 — free 10,000 units/day
+- No AI cost — pure algorithm-based scoring
 
-### 2. Connect Vercel (free)
-- Go to https://vercel.com → New Project
-- Import your GitHub repo
-- Framework: **Vite** | Build: `npm run build` | Output: `dist`
+---
 
-### 3. Add environment variables in Vercel
-Project → Settings → Environment Variables:
-```
-ANTHROPIC_API_KEY  =  sk-ant-xxxxxxxxx   ← required
-YOUTUBE_API_KEY    =  AIzaSyxxxxxxx      ← strongly recommended (free)
-```
+## Environment variables
 
-**Getting your YouTube API key (free, 2 minutes):**
-1. Go to https://console.cloud.google.com
-2. Create a project → Enable "YouTube Data API v3"
-3. Credentials → Create API Key → copy it
+Add these in Netlify → Site settings → Environment variables:
 
-**Getting your Anthropic key (free $5 credit):**
-1. Go to https://console.anthropic.com
-2. API Keys → Create Key → copy it
+YOUTUBE_API_KEY = AIzaSyYOUR_KEY
+SUPABASE_URL = https://xxxx.supabase.co
+SUPABASE_SERVICE_KEY = your-service-role-key
 
-### 4. Deploy → get your live URL in ~60 seconds
 
-### 5. Local development
+---
+
+## Local development
+
 ```bash
 npm install
 cp .env.example .env.local
-# fill in your keys
-npm install -g vercel
-vercel dev   # runs both frontend + API locally
+# fill in your keys in .env.local
+npm install -g netlify-cli
+netlify dev
 ```
+
+---
+
+## Deploy
+
+1. Push to GitHub
+2. Connect repo on netlify.com
+3. Add environment variables
+4. Deploy
+5. Visit /api/migrate once to create the database table
 
 ---
 
 ## Project structure
 
-```
 nicheradar/
-├── api/
-│   ├── _claude.js       # Free data fetchers + Claude synthesis helper
-│   ├── analyze.js       # POST /api/analyze  — deep niche analysis
-│   ├── compare.js       # POST /api/compare  — TikTok vs Instagram
-│   └── dashboard.js     # GET  /api/dashboard — all 5 niches overview
+├── netlify/
+│ └── functions/
+│ ├── _data.js # Reddit + YouTube data fetchers
+│ ├── _db.js # Supabase database queries
+│ ├── analyze.js # POST /api/analyze
+│ ├── compare.js # POST /api/compare
+│ ├── dashboard.js # GET /api/dashboard
+│ ├── hashtags.js # POST /api/hashtags
+│ ├── history.js # GET /api/history
+│ └── migrate.js # GET /api/migrate (run once)
 ├── src/
-│   ├── components/      # Layout, ScoreRing, PlatformBadge, Skeleton
-│   ├── pages/           # Dashboard, Analyze, Compare
-│   └── utils/api.js     # Frontend fetch helpers
-├── .env.example
-├── vercel.json
+│ ├── components/
+│ ├── pages/
+│ └── utils/
+├── netlify.toml
 └── package.json
-```
+
 
 ---
 
 ## Usage limits (free tier)
 
-| What          | Free limit           | What happens if exceeded        |
-|---------------|---------------------|---------------------------------|
-| YouTube API   | 10,000 units/day    | Falls back to Reddit-only mode  |
-| Reddit API    | Soft limit ~60 req/min | Add 1s delay between requests |
-| Anthropic     | $5 free credit      | Pay-as-you-go after (~$0.0003/call) |
-| Vercel        | 100GB bandwidth/mo  | Upgrade plan ($20/mo)           |
-
-For personal use you will never hit any of these limits.
+| Service | Free limit | Notes |
+|---|---|---|
+| Netlify | 125k function calls/month | More than enough for personal use |
+| Supabase | 500MB storage, 2GB bandwidth | Resets monthly |
+| YouTube API | 10,000 units/day | Each scan = 100 units |
+| Reddit API | ~60 requests/minute | No hard limit for public data |

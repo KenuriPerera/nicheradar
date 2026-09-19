@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Search, BarChart2, Hash, Radio, Sparkles } from 'lucide-react'
+import { LayoutDashboard, Search, BarChart2, Hash, Clock, Radio, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 
 const nav = [
@@ -7,6 +7,7 @@ const nav = [
   { to: '/analyze',  icon: Search,          label: 'Analyze'   },
   { to: '/compare',  icon: BarChart2,        label: 'Compare'   },
   { to: '/hashtags', icon: Hash,             label: 'Hashtags'  },
+  { to: '/history',  icon: Clock,            label: 'History'   },
 ]
 
 export default function Layout() {

@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Analyze from './pages/Analyze'
 import Compare from './pages/Compare'
 import Hashtags from './pages/Hashtags'
+import History from './pages/History'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="analyze"  element={<Analyze />}  />
           <Route path="compare"  element={<Compare />}  />
           <Route path="hashtags" element={<Hashtags />} />
+          <Route path="history"  element={<History />}  />
         </Route>
       </Routes>
     </BrowserRouter>
