@@ -56,7 +56,7 @@ export default function Dashboard() {
       {/* Error */}
       {error && (
         <div className="card border-red-500/30 bg-red-500/5 text-red-400 text-sm">
-          {error} — check your <code className="font-mono text-xs">ANTHROPIC_API_KEY</code> in Vercel environment variables.
+          {error} — check your Netlify environment variables (YOUTUBE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY).
         </div>
       )}
 

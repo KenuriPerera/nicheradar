@@ -7,7 +7,7 @@ export const handler = async (event) => {
     'Content-Type': 'application/json',
   }
 
-  if (event?.httpMethod === 'OPTIONS') {
+  if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' }
   }
 
