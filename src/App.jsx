@@ -5,6 +5,9 @@ import Analyze from './pages/Analyze'
 import Compare from './pages/Compare'
 import Hashtags from './pages/Hashtags'
 import History from './pages/History'
+import Monetize from './pages/Monetize'
+import PostingTimes from './pages/PostingTimes'
+import Currency from './pages/Currency'
 
 export default function App() {
   return (
@@ -12,10 +15,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path="analyze"  element={<Analyze />}  />
-          <Route path="compare"  element={<Compare />}  />
-          <Route path="hashtags" element={<Hashtags />} />
-          <Route path="history"  element={<History />}  />
+          <Route path="analyze"       element={<Analyze />}       />
+          <Route path="compare"       element={<Compare />}       />
+          <Route path="hashtags"      element={<Hashtags />}      />
+          <Route path="history"       element={<History />}       />
+          <Route path="monetize"      element={<Monetize />}      />
+          <Route path="posting-times" element={<PostingTimes />} />
+          <Route path="currency"      element={<Currency />}      />
         </Route>
       </Routes>
     </BrowserRouter>

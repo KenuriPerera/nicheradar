@@ -47,3 +47,13 @@ export const getHistory = (niche, days = 14) =>
 export const getNiches = () =>
   fetch('/api/niches').then(handle)
 
+export const getMonetize = (niche) =>
+  fetch(`/api/monetize?niche=${niche}`).then(handle)
+
+export const getPostingTimes = (platform) =>
+  fetch(`/api/posting-times${platform ? `?platform=${platform}` : ''}`).then(handle)
+
+export const getCurrency = (base = 'USD') =>
+  fetch(`/api/currency?base=${base}`).then(handle)
+
+

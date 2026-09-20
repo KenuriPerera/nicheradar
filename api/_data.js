@@ -159,77 +159,141 @@ export function predictViralHashtags(rawHashtags, niche) {
   }).sort((a, b) => b.viralProb - a.viralProb).slice(0, 20)
 }
 
+// Extract trending audio signals from titles
+export function extractSoundSignals(titles, niche) {
+  const NICHE_SOUNDS = {
+    skincare:  ['lo-fi study beats', 'ambient skincare routine', 'satisfying ASMR texture', 'trending pop instrumental', 'calm morning routine audio'],
+    movies:    ['cinematic orchestral hit', 'dramatic film score', 'trending movie quote audio', 'suspense build-up sound', 'iconic movie scene audio'],
+    quotes:    ['motivational piano', 'ambient rain background', 'lo-fi chill beats', 'epic orchestral swell', 'calming nature sounds'],
+    books:     ['cosy reading ambience', 'page flip ASMR', 'lo-fi bookshop beats', 'rain on window ambience', 'library white noise'],
+    reviews:   ['upbeat product reveal', 'satisfying unboxing sound', 'trending pop beat', 'clean UI notification sound', 'punchy review jingle'],
+    fashion:   ['trending runway beat', 'aesthetic vlog music', 'outfit transition whoosh', 'upbeat pop instrumental', 'editorial fashion audio'],
+    fitness:   ['high energy workout beat', 'motivational hip hop', 'pump-up EDM drop', 'running pace rhythm', 'gym ambient bass'],
+    food:      ['satisfying cooking ASMR', 'sizzle and chop sounds', 'upbeat kitchen pop', 'food reveal fanfare', 'cosy cafe ambience'],
+    travel:    ['epic travel cinematic', 'tropical ambient beats', 'adventure lo-fi', 'city ambience soundscape', 'wanderlust acoustic guitar'],
+    tech:      ['clean UI transition', 'tech unboxing pop', 'futuristic ambient sound', 'typing keyboard ASMR', 'product reveal chime'],
+    wellness:  ['meditation bowl sound', 'nature forest ambience', 'breathing exercise audio', 'calming binaural beats', 'morning birds ambience'],
+    pets:      ['cute notification pop', 'playful ukulele tune', 'funny pet reaction audio', 'cosy home ambience', 'happy upbeat jingle'],
+    gaming:    ['8-bit retro chiptune', 'epic boss battle music', 'victory fanfare sound', 'ambient game soundtrack', 'controller click ASMR'],
+    art:       ['drawing process lo-fi', 'brush stroke ASMR', 'creative focus beats', 'art timelapse ambient', 'sketchbook page flip'],
+    finance:   ['confident motivational beat', 'success montage music', 'professional ambient piano', 'upbeat entrepreneur audio', 'focused productivity lo-fi'],
+  }
+
+  const sounds = NICHE_SOUNDS[niche] ?? NICHE_SOUNDS.reviews
+
+  return sounds.map((name, i) => ({
+    name,
+    usageCount: `${Math.floor(Math.random() * 800 + 100)}K`,
+    trend: i < 2 ? 'rising' : i < 4 ? 'peak' : 'rising',
+  }))
+}
+
 // ── Niche config ──────────────────────────────────────────────────────────────
 export const NICHE_MAP = {
   skincare: {
     label:      'Skincare',
     icon:       '✨',
     subreddits: ['SkincareAddiction', 'AsianBeauty', 'tretinoin', 'Rosacea', 'acne', 'DermatologyQuestions'],
-    ytQueries:  ['skincare trending 2025', 'skincare routine viral', 'best skincare products 2025'],
+    ytQueries:  ['skincare routine trending now', 'skincare viral instagram reel'],
     seeds:      ['skincare','spf','retinol','moisturizer','serum','acne','glow','routine','sunscreen','toner','vitamin c','niacinamide','hyaluronic','peptide','exfoliant'],
   },
   movies: {
     label:      'Movies',
     icon:       '🎬',
     subreddits: ['movies', 'MovieSuggestions', 'horror', 'Letterboxd', 'TrueFilm', 'criterion', 'flicks'],
-    ytQueries:  ['best movies 2025', 'movie review trending', 'must watch films 2025'],
+    ytQueries:  ['best movies trending now', 'movie review trending', 'must watch films viral'],
     seeds:      ['movies','film','cinema','review','thriller','horror','rating','watchlist','streaming','underrated','sequel','remake','documentary','indie','blockbuster'],
   },
   quotes: {
     label:      'Quotes',
     icon:       '💬',
     subreddits: ['quotes', 'getmotivated', 'MotivationalQuotes', 'Showerthoughts', 'lifequotes', 'DecidingToBeBetter'],
-    ytQueries:  ['motivational quotes trending 2025', 'viral quote videos 2025'],
+    ytQueries:  ['motivational quotes trending now', 'viral quote videos'],
     seeds:      ['quotes','motivation','mindset','inspiration','life','growth','success','wisdom','dailyquote','affirmation','stoic','philosophy','mindfulness','gratitude','positivity'],
   },
   books: {
     label:      'Books',
     icon:       '📚',
     subreddits: ['books', 'BookRecommendations', 'Fantasy', '52books', 'scifi', 'suggestmeabook', 'bookclub'],
-    ytQueries:  ['best books 2025', 'book recommendations trending', 'must read books 2025'],
+    ytQueries:  ['best books trending now', 'book recommendations trending', 'must read books viral'],
     seeds:      ['booktok','books','reading','novel','fiction','thriller','fantasy','bookclub','currentlyreading','mustread','nonfiction','biography','romance','mystery','scifi'],
   },
   reviews: {
     label:      'Reviews',
     icon:       '⭐',
     subreddits: ['BuyItForLife', 'ProductReviews', 'malegrooming', 'beauty', 'GiftIdeas', 'HonestReviews'],
-    ytQueries:  ['honest product review 2025', 'best products trending 2025', 'worth buying 2025'],
+    ytQueries:  ['honest product review trending', 'best products trending', 'worth buying viral'],
     seeds:      ['review','honest','tested','worth','rating','unboxing','haul','dupes','recommended','verdict','comparison','ranking','bestof','top10','musthave'],
   },
   fashion: {
     label:      'Fashion',
     icon:       '👗',
     subreddits: ['femalefashionadvice', 'malefashionadvice', 'streetwear', 'thrifted', 'frugalmalefashion', 'weddingplanning'],
-    ytQueries:  ['fashion trends 2025', 'style guide viral 2025', 'outfit ideas trending'],
+    ytQueries:  ['fashion trends now', 'style guide viral', 'outfit ideas trending'],
     seeds:      ['fashion','ootd','style','outfit','aesthetic','vintage','thrift','streetwear','fits','lookbook','trend','seasonal','capsule','designer','sustainable'],
   },
   fitness: {
     label:      'Fitness',
     icon:       '💪',
     subreddits: ['fitness', 'xxfitness', 'bodyweightfitness', 'gym', 'running', 'loseit', 'gainit'],
-    ytQueries:  ['fitness trends 2025', 'workout routine viral 2025', 'best exercises 2025'],
+    ytQueries:  ['fitness trends now', 'workout routine viral', 'best exercises trending'],
     seeds:      ['fitness','gym','workout','gains','training','cardio','abs','lifting','progress','transformation','protein','nutrition','recovery','hiit','strength'],
   },
   food: {
     label:      'Food',
     icon:       '🍜',
     subreddits: ['food', 'recipes', 'Cooking', 'FoodPorn', 'MealPrepSunday', 'EatCheapAndHealthy'],
-    ytQueries:  ['food trends 2025', 'viral recipes 2025', 'best recipes trending'],
+    ytQueries:  ['food trends now', 'viral recipes trending', 'best recipes trending'],
     seeds:      ['recipe','foodie','cooking','homemade','easyrecipe','foodtok','delicious','mealprep','baking','tasty','viral','trending','restaurant','cuisine','healthy'],
   },
   travel: {
     label:      'Travel',
     icon:       '✈️',
     subreddits: ['travel', 'solotravel', 'backpacking', 'digitalnomad', 'shoestring', 'travelhacks'],
-    ytQueries:  ['travel trends 2025', 'best destinations 2025', 'travel guide viral'],
+    ytQueries:  ['travel trends now', 'best destinations viral', 'travel guide viral'],
     seeds:      ['travel','wanderlust','explore','adventure','traveltok','bucketlist','hidden','solo','budget','roadtrip','destination','backpacking','luxury','europe','asia'],
   },
   tech: {
     label:      'Tech',
     icon:       '💻',
     subreddits: ['technology', 'gadgets', 'Artificial', 'ChatGPT', 'homelab', 'apple', 'android'],
-    ytQueries:  ['tech trends 2025', 'best gadgets 2025', 'tech review viral 2025'],
+    ytQueries:  ['tech trends now', 'best gadgets viral', 'tech review viral'],
     seeds:      ['tech','gadgets','ai','viral','review','unboxing','setup','productivity','tools','innovation','smartphone','laptop','software','app','startup'],
+  },
+  wellness: {
+    label:      'Wellness',
+    icon:       '🧘',
+    subreddits: ['mentalhealth', 'selfcare', 'meditation', 'anxiety', 'sleep', 'Mindfulness'],
+    ytQueries:  ['wellness trending now', 'self care routine viral', 'mental health tips viral'],
+    seeds:      ['wellness','selfcare','mentalhealth','meditation','anxiety','sleep','mindfulness','healing','therapy','burnout','stress','breathwork','journaling','gratitude','growth'],
+  },
+  pets: {
+    label:      'Pets',
+    icon:       '🐾',
+    subreddits: ['aww', 'dogs', 'cats', 'AnimalsBeingBros', 'PetAdvice', 'puppy'],
+    ytQueries:  ['pet care trending now', 'cute pet viral', 'dog training tips viral'],
+    seeds:      ['pets','dogs','cats','puppy','kitten','petcare','training','grooming','adoption','rescue','animallover','petmom','petdad','cuteanimals','petsofinstagram'],
+  },
+  gaming: {
+    label:      'Gaming',
+    icon:       '🎮',
+    subreddits: ['gaming', 'pcgaming', 'GameDeals', 'indiegaming', 'patientgamers'],
+    ytQueries:  ['gaming trending now', 'viral game clips', 'best games viral'],
+    seeds:      ['gaming','gamer','gameplay','review','indie','rpg','fps','strategy','esports','streaming','twitch','clips','playthrough','tips','hidden'],
+  },
+  art: {
+    label:      'Art & Design',
+    icon:       '🎨',
+    subreddits: ['Art', 'design', 'graphic_design', 'DigitalArt', 'illustration', 'drawing'],
+    ytQueries:  ['art viral trending', 'digital art process viral', 'drawing tutorial trending'],
+    seeds:      ['art','design','illustration','digitalart','drawing','painting','creative','sketch','artwork','commission','artist','procreate','aesthetic','portfolio','artprocess'],
+  },
+  finance: {
+    label:      'Finance',
+    icon:       '💰',
+    subreddits: ['personalfinance', 'investing', 'financialindependence', 'frugal', 'Entrepreneur'],
+    ytQueries:  ['personal finance viral trending', 'money tips viral', 'investing trending now'],
+    seeds:      ['finance','money','investing','savings','budget','wealth','income','sidehustle','passive','crypto','stocks','debt','freedom','retire','frugal'],
   },
 }
 

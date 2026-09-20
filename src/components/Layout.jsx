@@ -1,13 +1,16 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Search, BarChart2, Hash, Clock, Radio, Sparkles } from 'lucide-react'
+import { LayoutDashboard, Search, BarChart2, Hash, Clock, DollarSign, Calendar, ArrowRightLeft, Radio, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 
 const nav = [
-  { to: '/',         icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/analyze',  icon: Search,          label: 'Analyze'   },
-  { to: '/compare',  icon: BarChart2,        label: 'Compare'   },
-  { to: '/hashtags', icon: Hash,             label: 'Hashtags'  },
-  { to: '/history',  icon: Clock,            label: 'History'   },
+  { to: '/',              icon: LayoutDashboard, label: 'Dashboard'     },
+  { to: '/analyze',       icon: Search,          label: 'Analyze'       },
+  { to: '/compare',       icon: BarChart2,        label: 'Compare'       },
+  { to: '/hashtags',      icon: Hash,             label: 'Hashtags'      },
+  { to: '/history',       icon: Clock,            label: 'History'       },
+  { to: '/monetize',      icon: DollarSign,       label: 'Monetize'      },
+  { to: '/posting-times', icon: Calendar,         label: 'Posting Times' },
+  { to: '/currency',      icon: ArrowRightLeft,   label: 'Currency'      },
 ]
 
 export default function Layout() {
