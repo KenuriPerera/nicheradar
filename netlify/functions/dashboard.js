@@ -21,8 +21,8 @@ export const handler = async (event) => {
         const cfg = NICHE_MAP[niche]
         try {
           const [redditData, ytVideos] = await Promise.all([
-            fetchReddit(cfg.subreddits.slice(0, 2), 15),
-            fetchYouTube(cfg.ytQueries.slice(0, 1), 6),
+            fetchReddit(cfg.subreddits.slice(0, 3), 25),
+            fetchYouTube(cfg.ytQueries.slice(0, 2), 8),
           ])
           const titledPosts = []
           for (const { posts } of redditData) {
@@ -64,7 +64,7 @@ export const handler = async (event) => {
     const avgScore    = validScores.length
       ? Math.round(validScores.reduce((s, n) => s + n.viralScore, 0) / validScores.length)
       : 0
-    const trending    = validScores.filter(n => n.viralScore >= 50).length
+    const trending    = validScores.filter(n => n.viralScore >= 10).length
 
     return {
       statusCode: 200,

@@ -113,9 +113,9 @@ function NicheCard({ item }) {
     <div className="card hover:border-radar-accent/50 transition-all duration-200 group space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-white font-medium capitalize">{item.niche}</h3>
+          <h3 className="text-white font-medium">{item.icon} {item.label ?? item.niche}</h3>
           <p className="text-radar-muted text-xs mt-0.5 line-clamp-2">
-            {item.summary ?? 'Trend data loading...'}
+            {item.summary ?? `Fetching live ${item.niche} trends...`}
           </p>
         </div>
         {item.viralScore != null && (

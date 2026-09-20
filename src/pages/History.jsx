@@ -50,7 +50,7 @@ export default function History() {
       <div>
         <h1 className="text-2xl font-semibold text-white">Trend History</h1>
         <p className="text-radar-muted text-sm mt-1">
-          Track historical hashtag snapshot trends over time powered by Vercel Postgres
+          Track historical hashtag snapshot trends over time powered by Supabase
         </p>
       </div>
 
