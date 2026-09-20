@@ -1,9 +1,7 @@
 import {
   cors, fetchReddit, fetchYouTube,
-  scoreNiche, extractHashtags, predictViralHashtags, NICHE_MAP
+  scoreNiche, extractHashtags, predictViralHashtags, NICHE_MAP, NICHE_KEYS
 } from './_data.js'
-
-const NICHES = ['skincare', 'movies', 'quotes', 'books', 'reviews']
 
 export default async function handler(req, res) {
   cors(res)
@@ -12,7 +10,7 @@ export default async function handler(req, res) {
 
   // Fetch all niches in parallel
   const nicheResults = await Promise.all(
-    NICHES.map(async (niche) => {
+    NICHE_KEYS.map(async (niche) => {
       const cfg = NICHE_MAP[niche]
       try {
         const [redditData, ytVideos] = await Promise.all([
@@ -53,7 +51,7 @@ export default async function handler(req, res) {
 
   res.status(200).json({
     summary: {
-      trendingNiches:  `${trending} of ${NICHES.length}`,
+      trendingNiches:  `${trending} of ${NICHE_KEYS.length}`,
       avgViralScore:   avgScore,
       bestPostingHour: '7 PM',
     },

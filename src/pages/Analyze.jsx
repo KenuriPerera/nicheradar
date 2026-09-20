@@ -12,11 +12,12 @@ import { analyzeTrend } from '../utils/api'
 import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
+import { useNiches } from '../hooks/useNiches'
 
-const NICHES    = ['skincare', 'movies', 'quotes', 'books', 'reviews']
 const PLATFORMS = ['both', 'tiktok', 'instagram']
 
 export default function Analyze() {
+  const { niches }  = useNiches()
   const [params]    = useSearchParams()
   const [niche,     setNiche]     = useState(params.get('niche') || 'skincare')
   const [platform,  setPlatform]  = useState('both')
@@ -66,8 +67,8 @@ export default function Analyze() {
               onChange={e => setNiche(e.target.value)}
               className="w-full bg-radar-bg border border-radar-border text-white rounded-xl px-4 py-2.5 text-sm appearance-none pr-8 focus:outline-none focus:border-radar-accent"
             >
-              {NICHES.map(n => (
-                <option key={n} value={n} className="capitalize">{n.charAt(0).toUpperCase() + n.slice(1)}</option>
+              {niches.map(n => (
+                <option key={n.key} value={n.key}>{n.icon} {n.label}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />

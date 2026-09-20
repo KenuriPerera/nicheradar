@@ -4,10 +4,10 @@ import { getHistory } from '../utils/api'
 import { SkeletonCard } from '../components/Skeleton'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import clsx from 'clsx'
-
-const NICHES = ['skincare', 'movies', 'quotes', 'books', 'reviews']
+import { useNiches } from '../hooks/useNiches'
 
 export default function History() {
+  const { niches } = useNiches()
   const [niche, setNiche] = useState('skincare')
   const [days, setDays] = useState(14)
   const [data, setData] = useState(null)
@@ -64,8 +64,8 @@ export default function History() {
               onChange={e => setNiche(e.target.value)}
               className="w-full bg-radar-bg border border-radar-border text-white rounded-xl px-4 py-2.5 text-sm appearance-none pr-8 focus:outline-none focus:border-radar-accent"
             >
-              {NICHES.map(n => (
-                <option key={n} value={n}>{n.charAt(0).toUpperCase() + n.slice(1)}</option>
+              {niches.map(n => (
+                <option key={n.key} value={n.key}>{n.icon} {n.label}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />

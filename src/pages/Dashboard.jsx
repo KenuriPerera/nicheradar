@@ -5,10 +5,10 @@ import { getDashboard } from '../utils/api'
 import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
-
-const NICHES = ['skincare', 'movies', 'quotes', 'books', 'reviews']
+import { useNiches } from '../hooks/useNiches'
 
 export default function Dashboard() {
+  const { niches } = useNiches()
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
@@ -87,12 +87,12 @@ export default function Dashboard() {
           Your Niches
         </h2>
         {loading && !data ? (
-          <div className="grid grid-cols-2 gap-4">
-            {NICHES.map(n => <SkeletonCard key={n} />)}
+          <div className="grid grid-cols-3 gap-4">
+            {niches.map(n => <SkeletonCard key={n.key} />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {(data?.niches ?? NICHES.map(n => ({ niche: n }))).map((item) => (
+          <div className="grid grid-cols-3 gap-4">
+            {(data?.niches ?? niches.map(n => ({ niche: n.key }))).map((item) => (
               <NicheCard key={item.niche} item={item} />
             ))}
           </div>

@@ -43,3 +43,7 @@ const handle = async (res) => {
 
 export const getHistory = (niche, days = 14) =>
   fetch(`/api/history?niche=${niche}&days=${days}`).then(handle)
+
+export const getNiches = () =>
+  fetch('/api/niches').then(handle)
+

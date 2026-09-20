@@ -206,32 +206,79 @@ export function predictViralHashtags(hashtags, niche) {
 // ── Niche config ──────────────────────────────────────────────────────────────
 export const NICHE_MAP = {
   skincare: {
+    label:      'Skincare',
+    icon:       '✨',
     subreddits: ['SkincareAddiction', 'AsianBeauty', 'tretinoin', 'DrSquatch'],
     ytQueries:  ['skincare routine tiktok 2025', 'skincare viral instagram reel 2025'],
     seeds:      ['skincare','spf','retinol','moisturizer','serums','acne','glow','routine','sunscreen','toner'],
   },
   movies: {
+    label:      'Movies',
+    icon:       '🎬',
     subreddits: ['movies', 'MovieSuggestions', 'horror', 'netflixbestof'],
     ytQueries:  ['movie review tiktok viral 2025', 'film recommendation reel 2025'],
     seeds:      ['movies','film','cinema','review','thriller','horror','rating','watchlist','streaming','underrated'],
   },
   quotes: {
+    label:      'Quotes',
+    icon:       '💬',
     subreddits: ['quotes', 'getmotivated', 'MotivationalQuotes', 'Showerthoughts'],
     ytQueries:  ['quote video tiktok viral 2025', 'motivation quotes instagram 2025'],
     seeds:      ['quotes','motivation','mindset','inspiration','life','growth','success','wisdom','dailyquote','affirmation'],
   },
   books: {
+    label:      'Books',
+    icon:       '📚',
     subreddits: ['books', 'BookRecommendations', 'Fantasy', '52books'],
     ytQueries:  ['booktok tiktok 2025 viral', 'book recommendation bookstagram 2025'],
     seeds:      ['booktok','books','reading','novel','fiction','thriller','fantasy','bookclub','currentlyreading','mustread'],
   },
   reviews: {
+    label:      'Reviews',
+    icon:       '⭐',
     subreddits: ['BuyItForLife', 'ProductReviews', 'malegrooming', 'HonestReviews'],
     ytQueries:  ['honest review tiktok viral 2025', 'product review instagram reel 2025'],
     seeds:      ['review','honest','tested','worth','rating','unboxing','haul','dupes','recommended','verdict'],
   },
+  fashion: {
+    label:      'Fashion',
+    icon:       '👗',
+    subreddits: ['femalefashionadvice', 'malefashionadvice', 'streetwear', 'thrifted'],
+    ytQueries:  ['fashion tiktok viral 2025', 'outfit ideas instagram reel 2025'],
+    seeds:      ['fashion','ootd','style','outfit','aesthetic','vintage','thrift','streetwear','fits','lookbook'],
+  },
+  fitness: {
+    label:      'Fitness',
+    icon:       '💪',
+    subreddits: ['fitness', 'xxfitness', 'bodyweightfitness', 'gym'],
+    ytQueries:  ['fitness tiktok viral 2025', 'workout reel instagram 2025'],
+    seeds:      ['fitness','gym','workout','gains','training','cardio','abs','lifting','progress','transformation'],
+  },
+  food: {
+    label:      'Food',
+    icon:       '🍜',
+    subreddits: ['food', 'recipes', 'Cooking', 'FoodPorn'],
+    ytQueries:  ['food tiktok viral recipe 2025', 'food instagram reel 2025'],
+    seeds:      ['recipe','foodie','cooking','homemade','easyrecipe','foodtok','delicious','mealprep','baking','tasty'],
+  },
+  travel: {
+    label:      'Travel',
+    icon:       '✈️',
+    subreddits: ['travel', 'solotravel', 'backpacking', 'digitalnomad'],
+    ytQueries:  ['travel tiktok viral 2025', 'travel reel instagram 2025'],
+    seeds:      ['travel','wanderlust','explore','adventure','traveltok','bucketlist','hidden','solo','budget','roadtrip'],
+  },
+  tech: {
+    label:      'Tech',
+    icon:       '💻',
+    subreddits: ['technology', 'gadgets', 'Artificial', 'ChatGPT'],
+    ytQueries:  ['tech tiktok viral 2025', 'tech review instagram reel 2025'],
+    seeds:      ['tech','gadgets','ai','viral','review','unboxing','setup','productivity','tools','innovation'],
+  },
 }
 
+// Auto-derived — never edit these manually
+export const NICHE_KEYS  = Object.keys(NICHE_MAP)
 export const NICHE_SEEDS = Object.fromEntries(
   Object.entries(NICHE_MAP).map(([k, v]) => [k, v.seeds])
 )
