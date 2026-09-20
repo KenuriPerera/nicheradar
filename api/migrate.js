@@ -1,21 +1,39 @@
-import { sql } from '@vercel/postgres'
-import { cors } from './_data.js'
+import { setupSchema, dbAvailable } from './_db.js'
 
-export default async function handler(req, res) {
-  cors(res)
-  if (req.method === 'OPTIONS') return res.status(200).end()
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Content-Type': 'application/json',
+}
+
+export const handler = async (event) => {
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'GET only' }) }
+  }
+
+  const available = await dbAvailable()
+  if (!available) {
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify({
+        error: 'Database not connected',
+        fix:   'Add SUPABASE_URL and SUPABASE_SERVICE_KEY to Netlify environment variables',
+      }),
+    }
+  }
 
   try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS trend_snapshots (
-        id SERIAL PRIMARY KEY,
-        niche VARCHAR(50) NOT NULL,
-        hashtags JSONB NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `
-    res.status(200).json({ success: true, message: 'Database migrated successfully: trend_snapshots table ready.' })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
+    await setupSchema()
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        ok:      true,
+        message: 'Schema ready — hashtag_snapshots table created',
+        next:    'Go to /hashtags and run a scan to start building history',
+      }),
+    }
+  } catch (e) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) }
   }
 }

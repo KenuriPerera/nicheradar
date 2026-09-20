@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, BarChart2, AlertCircle } from 'lucide-react'
+import clsx from 'clsx'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
@@ -12,6 +13,7 @@ import { useNiches } from '../hooks/useNiches'
 export default function Compare() {
   const { niches }  = useNiches()
   const [niche,   setNiche]   = useState('skincare')
+  const [noFace,  setNoFace]  = useState(false)
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
@@ -21,7 +23,7 @@ export default function Compare() {
     setError(null)
     setData(null)
     try {
-      const res = await comparePlatforms(niche)
+      const res = await comparePlatforms(niche, noFace)
       setData(res)
     } catch (e) {
       setError(e.message)
@@ -61,6 +63,22 @@ export default function Compare() {
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />
           </div>
         </div>
+
+        <div className="flex items-center gap-2 self-end">
+          <button
+            onClick={() => setNoFace(!noFace)}
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border transition-all duration-200',
+              noFace
+                ? 'bg-radar-accent border-radar-accent text-white'
+                : 'border-radar-border text-radar-muted hover:border-radar-accent hover:text-white'
+            )}
+          >
+            <span>{noFace ? '👤' : '👥'}</span>
+            {noFace ? 'No-face mode' : 'All content'}
+          </button>
+        </div>
+
         <button onClick={run} disabled={loading} className="btn-primary">
           <BarChart2 className="w-4 h-4" />
           {loading ? 'Comparing…' : 'Compare'}
@@ -120,7 +138,7 @@ export default function Compare() {
             <div className="card border-radar-accent/30 bg-radar-accent/5 space-y-2">
               <p className="text-xs text-radar-accent font-medium uppercase tracking-wider">Recommendation</p>
               <p className="text-white text-sm leading-relaxed">{data.recommendation}</p>
-              {data.noFaceStrategy && (
+              {data.noFaceStrategy && noFace && (
                 <div className="pt-2 border-t border-radar-accent/10">
                   <p className="text-xs text-radar-muted font-medium mb-1">No-face creator strategy</p>
                   <p className="text-sm text-radar-text/80">{data.noFaceStrategy}</p>

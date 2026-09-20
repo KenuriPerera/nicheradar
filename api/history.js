@@ -1,28 +1,62 @@
-import { cors } from './_data.js'
-import { getSnapshots, dbAvailable } from './_db.js'
+import { NICHE_MAP } from './_data.js'
+import { getTopHashtagsHistory, getDailyTrends, getEmergingTags, dbAvailable } from './_db.js'
 
-export default async function handler(req, res) {
-  cors(res)
-  if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Content-Type': 'application/json',
+}
 
-  const { niche = 'skincare', days = 14 } = req.query ?? {}
-  const hasDB = await dbAvailable()
-
-  if (!hasDB) {
-    return res.status(200).json({
-      niche,
-      dbConnected: false,
-      history: [],
-      message: 'Vercel Postgres not configured. Set POSTGRES_URL environment variable to store and view historical data.'
-    })
+export const handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' }
   }
 
-  const rows = await getSnapshots(niche, parseInt(days, 10) || 14)
+  const niche = event.queryStringParameters?.niche ?? 'skincare'
+  const days  = parseInt(event.queryStringParameters?.days ?? '14', 10)
 
-  res.status(200).json({
-    niche,
-    dbConnected: true,
-    history: rows
-  })
+  const hasDB = await dbAvailable()
+  if (!hasDB) {
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify({
+        error: 'Database not connected',
+        fix:   'Add SUPABASE_URL and SUPABASE_SERVICE_KEY to Netlify environment variables',
+      }),
+    }
+  }
+
+  try {
+    const [topHashtags, dailyTrends, emerging] = await Promise.all([
+      getTopHashtagsHistory(niche, days, 15),
+      getDailyTrends(niche, days),
+      getEmergingTags(niche),
+    ])
+
+    const dates  = [...new Set(dailyTrends.map(r => r.day))].sort()
+    const tags   = [...new Set(dailyTrends.map(r => r.tag))]
+    const series = tags.map(tag => ({
+      tag,
+      data: dates.map(day => {
+        const match = dailyTrends.find(r => r.tag === tag && r.day === day)
+        return match ? match.avg_prob : null
+      }),
+    }))
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        niche,
+        days,
+        fetchedAt: new Date().toISOString(),
+        topHashtags,
+        chart: { dates, series },
+        emerging,
+      }),
+    }
+  } catch (e) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) }
+  }
 }

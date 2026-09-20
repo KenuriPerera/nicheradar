@@ -1,20 +1,20 @@
 const BASE = '/api'
 
-export async function analyzeTrend(niche, platform = 'both') {
+export async function analyzeTrend(niche, platform = 'both', noFace = false) {
   const res = await fetch(`${BASE}/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ niche, platform })
+    body: JSON.stringify({ niche, platform, noFace })
   })
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Analysis failed')
   return res.json()
 }
 
-export async function comparePlatforms(niche) {
+export async function comparePlatforms(niche, noFace = false) {
   const res = await fetch(`${BASE}/compare`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ niche })
+    body: JSON.stringify({ niche, noFace })
   })
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Comparison failed')
   return res.json()

@@ -1,84 +1,116 @@
-import {
-  cors, fetchReddit, fetchYouTube,
-  scoreNiche, NICHE_MAP
-} from './_data.js'
+import { fetchReddit, fetchYouTube, scoreNiche, NICHE_MAP } from './_data.js'
 
-export default async function handler(req, res) {
-  cors(res)
-  if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Content-Type': 'application/json',
+}
 
-  const { niche = 'skincare' } = req.body ?? {}
+const PLATFORM_BIAS = {
+  skincare: { tiktok: +5,  instagram: +8  },
+  movies:   { tiktok: +8,  instagram: -3  },
+  quotes:   { tiktok: -2,  instagram: +10 },
+  books:    { tiktok: +6,  instagram: +5  },
+  reviews:  { tiktok: +10, instagram: +2  },
+  fashion:  { tiktok: +8,  instagram: +9  },
+  fitness:  { tiktok: +7,  instagram: +6  },
+  food:     { tiktok: +9,  instagram: +8  },
+  travel:   { tiktok: +5,  instagram: +10 },
+  tech:     { tiktok: +8,  instagram: +4  },
+}
+
+const INSIGHTS = {
+  tiktok: {
+    skincare: 'TikTok skincare is driven by ingredient education and before/after reveals.',
+    movies:   'Hot takes and controversial opinions drive TikTok movie content.',
+    quotes:   'Quotes with ambient audio and motion text perform best on TikTok.',
+    books:    'BookTok thrives on emotional reactions and cosy aesthetic.',
+    reviews:  'Honest unfiltered reviews with a strong hook drive TikTok engagement.',
+    fashion:  'Outfit transitions with trending audio dominate TikTok fashion.',
+    fitness:  'Short workout clips and transformation content drive TikTok fitness.',
+    food:     'Fast-cut recipe videos under 60s are the dominant TikTok food format.',
+    travel:   'Hidden gem reveals and budget travel tips drive TikTok travel.',
+    tech:     'Quick demos and hidden feature reveals perform best on TikTok.',
+  },
+  instagram: {
+    skincare: 'Instagram skincare favours carousel routines and aesthetic flat-lays.',
+    movies:   'Static rating graphics and aesthetic film stills perform well on IG.',
+    quotes:   'Minimal typography carousels are the dominant Instagram quote format.',
+    books:    'BookStagram is aesthetic-first — shelf photos and cover art drive follows.',
+    reviews:  'Clean product photography with text overlay performs best on IG.',
+    fashion:  'OOTD carousels and aesthetic flat-lays drive saves on Instagram.',
+    fitness:  'Progress photo carousels and aesthetic gym shots drive IG engagement.',
+    food:     'Aesthetic plating and recipe carousels drive saves on Instagram.',
+    travel:   'Stunning location aesthetics and travel carousels dominate IG.',
+    tech:     'Clean setup photos and spec carousels drive saves on Instagram.',
+  },
+}
+
+const NO_FACE = {
+  skincare: 'Film product close-ups and texture shots. Voiceover-only routines work equally well.',
+  movies:   'Use film stills, text overlays, and a distinctive written voice.',
+  quotes:   'Handwritten or minimal-typography formats — your aesthetic IS your identity.',
+  books:    'Cosy reading flat-lays and page-flip close-ups. The most no-face-friendly niche.',
+  reviews:  'B-roll of the product + honest voiceover. No face needed for credibility.',
+  fashion:  'Flat-lay outfits and hands-only try-on shots work well without showing face.',
+  fitness:  'Focus on form clips from neck down — body transformation content needs no face.',
+  food:     'Hands-only cooking process shots are the dominant food content format.',
+  travel:   'Scenery and location B-roll — travel content is naturally no-face friendly.',
+  tech:     'Product-only B-roll and screen recordings. Tech is fully no-face compatible.',
+}
+
+export const handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' }
+  }
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
+  }
+
+  const { niche = 'skincare', noFace = false } = JSON.parse(event.body ?? '{}')
   const cfg = NICHE_MAP[niche]
-  if (!cfg) return res.status(400).json({ error: `Unknown niche: ${niche}` })
+  if (!cfg) return { statusCode: 400, headers, body: JSON.stringify({ error: `Unknown niche: ${niche}` }) }
 
-  const [redditData, ytTikTok, ytIG] = await Promise.all([
-    fetchReddit(cfg.subreddits, 20),
-    fetchYouTube([`${niche} tiktok viral 2025`],    8),
-    fetchYouTube([`${niche} instagram reel 2025`],  8),
-  ])
+  try {
+    const [redditData, ytTikTok, ytIG] = await Promise.all([
+      fetchReddit(cfg.subreddits, 20),
+      fetchYouTube([`${niche} tiktok viral 2025`],   8),
+      fetchYouTube([`${niche} instagram reel 2025`], 8),
+    ])
 
-  const tkScores = scoreNiche(redditData, ytTikTok)
-  const igScores = scoreNiche(redditData, ytIG)
+    const tkScores = scoreNiche(redditData, ytTikTok)
+    const igScores = scoreNiche(redditData, ytIG)
+    const bias     = PLATFORM_BIAS[niche] ?? { tiktok: 0, instagram: 0 }
 
-  // Platform bias — TikTok skews younger/faster, IG skews aesthetic/longer
-  const PLATFORM_BIAS = {
-    skincare: { tiktok: +5,  instagram: +8  },
-    movies:   { tiktok: +8,  instagram: -3  },
-    quotes:   { tiktok: -2,  instagram: +10 },
-    books:    { tiktok: +6,  instagram: +5  },
-    reviews:  { tiktok: +10, instagram: +2  },
+    const tkViral = Math.min(100, tkScores.viralScore + bias.tiktok)
+    const igViral = Math.min(100, igScores.viralScore + bias.instagram)
+    const better  = tkViral >= igViral ? 'TikTok' : 'Instagram'
+    const delta   = Math.abs(tkViral - igViral)
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        tiktok: {
+          viralScore: tkViral,
+          reach:      Math.min(100, tkScores.reach      + bias.tiktok),
+          engagement: Math.min(100, tkScores.engagement + bias.tiktok),
+          longevity:  Math.min(100, tkScores.longevity),
+          insight:    INSIGHTS.tiktok[niche] ?? 'TikTok favours fast, authentic, trend-reactive content.',
+        },
+        instagram: {
+          viralScore: igViral,
+          reach:      Math.min(100, igScores.reach      + bias.instagram),
+          engagement: Math.min(100, igScores.engagement + bias.instagram),
+          longevity:  Math.min(100, igScores.longevity  + 5),
+          insight:    INSIGHTS.instagram[niche] ?? 'Instagram rewards polished, save-worthy, aesthetic content.',
+        },
+        recommendation: `${better} leads by ${delta} points for ${cfg.label} content. ${delta > 15 ? 'Focus your primary effort here.' : 'Both platforms are viable — cross-post with platform-specific formatting.'}`,
+        noFaceStrategy: noFace ? (NO_FACE[niche] ?? 'Both platforms support no-face content well.') : null,
+        fetchedAt: new Date().toISOString(),
+      }),
+    }
+  } catch (e) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) }
   }
-  const bias = PLATFORM_BIAS[niche] ?? { tiktok: 0, instagram: 0 }
-
-  const tkViral = Math.min(100, tkScores.viralScore + bias.tiktok)
-  const igViral = Math.min(100, igScores.viralScore + bias.instagram)
-
-  const better    = tkViral >= igViral ? 'TikTok' : 'Instagram'
-  const betterDelta = Math.abs(tkViral - igViral)
-
-  const NO_FACE_STRATEGY = {
-    skincare: 'Film product close-ups, ingredient labels, and skin texture shots. Voiceover-only routines perform equally well as face-cam.',
-    movies:   'Use film stills, text overlays, and a distinctive written voice. Aesthetic edits with no-face cinematography outperform face-cam reviews on both platforms.',
-    quotes:   'Handwritten or minimal-typography formats are the dominant no-face format. Your aesthetic IS your identity here.',
-    books:    'Cosy reading flat-lays, page-flip close-ups, and shelf aesthetics. BookTok/BookStagram are the most no-face-friendly niches that exist.',
-    reviews:  'B-roll of the product in use + honest voiceover. Viewers trust voice-only reviews — no face needed for credibility.',
-  }
-
-  const INSIGHTS = {
-    tiktok: {
-      skincare: 'TikTok skincare is driven by ingredient education and before/after reveals. Fast-cut voiceover routines under 60s dominate.',
-      movies:   'Hot takes and controversial opinions drive TikTok movie content. Shorter, punchy reviews under 45s outperform longer analysis.',
-      quotes:   'Quotes with ambient audio and motion text perform best. Handwritten aesthetic is trending over digital typography.',
-      books:    'BookTok thrives on emotional reactions and "books that broke me" formats. Cosy aesthetic is essential.',
-      reviews:  'Honest, unfiltered reviews with a strong opening hook drive TikTok engagement. Dupe comparisons are the highest-performing format.',
-    },
-    instagram: {
-      skincare: 'Instagram skincare favours carousel routines and aesthetic flat-lays. Save rates are the key metric — educational content wins.',
-      movies:   'Static rating graphics and aesthetic film stills perform well. Story shares drive reach on Instagram for this niche.',
-      quotes:   'Minimal typography carousels are the dominant Instagram quote format. Share-to-story is the primary viral mechanism.',
-      books:    'BookStagram is aesthetic-first. Shelf photos, cover art, and reading-nook setups drive follows and saves.',
-      reviews:  'Clean product photography with text overlay performs best. IG audience values polish over rawness for reviews.',
-    },
-  }
-
-  res.status(200).json({
-    tiktok: {
-      viralScore: tkViral,
-      reach:      Math.min(100, tkScores.reach      + bias.tiktok),
-      engagement: Math.min(100, tkScores.engagement + bias.tiktok),
-      longevity:  Math.min(100, tkScores.longevity),
-      insight:    INSIGHTS.tiktok[niche] ?? 'TikTok favours fast, authentic, trend-reactive content.',
-    },
-    instagram: {
-      viralScore: igViral,
-      reach:      Math.min(100, igScores.reach      + bias.instagram),
-      engagement: Math.min(100, igScores.engagement + bias.instagram),
-      longevity:  Math.min(100, igScores.longevity  + 5),
-      insight:    INSIGHTS.instagram[niche] ?? 'Instagram rewards polished, save-worthy, aesthetic content.',
-    },
-    recommendation: `${better} leads by ${betterDelta} points for ${niche} content right now. ${betterDelta > 15 ? 'Focus your primary effort here.' : 'Both platforms are viable — cross-post with platform-specific formatting.'}`,
-    noFaceStrategy: NO_FACE_STRATEGY[niche] ?? 'Both platforms support no-face content. Focus on strong audio, text overlays, and aesthetic B-roll.',
-    fetchedAt: new Date().toISOString(),
-  })
 }

@@ -2,202 +2,158 @@
 // Sources: Reddit (no key), YouTube (free key), Google Trends (no key)
 
 export function cors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (res && typeof res.setHeader === 'function') {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  }
 }
 
 // ── Reddit ────────────────────────────────────────────────────────────────────
-export async function fetchReddit(subreddits, limit = 25) {
+export async function fetchReddit(subreddits, limit = 50) {
   const results = []
   for (const sub of subreddits) {
     try {
-      const [hot, rising] = await Promise.all([
+      const [hot, rising, newest] = await Promise.all([
         fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=${limit}`,
           { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
         fetch(`https://www.reddit.com/r/${sub}/rising.json?limit=${limit}`,
           { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
+        fetch(`https://www.reddit.com/r/${sub}/new.json?limit=${limit}`,
+          { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
       ])
       const hotPosts    = hot?.data?.children?.map(c => ({ ...c.data, feed: 'hot'    })) ?? []
       const risingPosts = rising?.data?.children?.map(c => ({ ...c.data, feed: 'rising' })) ?? []
-      results.push({ subreddit: sub, posts: [...hotPosts, ...risingPosts] })
+      const newPosts    = newest?.data?.children?.map(c => ({ ...c.data, feed: 'new'    })) ?? []
+      results.push({ subreddit: sub, posts: [...hotPosts, ...risingPosts, ...newPosts] })
     } catch { continue }
   }
   return results
 }
 
-// ── YouTube (free key — 10k units/day) ───────────────────────────────────────
+// ── YouTube (free data layer via official API key if available, else HTML search) ──
 export async function fetchYouTube(queries, maxResults = 10) {
   const key = process.env.YOUTUBE_API_KEY
-  if (!key) return []
-  const all = []
-  for (const q of queries) {
+  const videos = []
+
+  for (const query of queries) {
+    if (key) {
+      try {
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=${maxResults}&type=video&order=date&key=${key}`
+        const res = await fetch(url)
+        if (res.ok) {
+          const data = await res.json()
+          for (const item of data.items ?? []) {
+            videos.push({
+              title:       item.snippet.title,
+              published:   item.snippet.publishedAt,
+              channel:     item.snippet.channelTitle,
+              description: item.snippet.description,
+            })
+          }
+          continue
+        }
+      } catch { /* fallback to scrape */ }
+    }
+
+    // HTML fallback if no key or key failed
     try {
-      const after = new Date(Date.now() - 7 * 864e5).toISOString()
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&order=viewCount&publishedAfter=${after}&maxResults=${maxResults}&key=${key}`
-      const res = await fetch(url)
-      if (!res.ok) continue
-      const data = await res.json()
-      all.push(...(data.items ?? []).map(v => ({
-        title:     v.snippet.title,
-        channel:   v.snippet.channelTitle,
-        published: v.snippet.publishedAt,
-        videoId:   v.id.videoId,
-      })))
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+      const res  = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } })
+      const html = await res.text()
+
+      const titleMatches = [...html.matchAll(/"title":{"runs":\[{"text":"(.*?)"}\]/g)].map(m => m[1])
+      for (const title of titleMatches.slice(0, maxResults)) {
+        if (title.length > 5 && !/YouTube|Home|Shorts/i.test(title)) {
+          videos.push({ title, published: new Date().toISOString(), channel: 'YouTube', description: title })
+        }
+      }
     } catch { continue }
   }
-  return all
+
+  return videos
 }
 
-// ── Google Trends (unofficial endpoint, no key) ────────────────────────────────
-export async function fetchGoogleTrends(keywords, geo = 'US') {
-  try {
-    const req = JSON.stringify({
-      comparisonItem: keywords.map(k => ({ keyword: k, geo, time: 'now 7-d' })),
-      category: 0, property: ''
-    })
-    const url = `https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req=${encodeURIComponent(req)}`
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
-    if (!res.ok) return null
-    const text = await res.text()
-    return JSON.parse(text.replace(/^\)\]\}',\n/, ''))
-  } catch { return null }
-}
-
-// ── Pure-math scoring engine (no AI needed) ──────────────────────────────────
-
+// ── Niche scoring algorithm ───────────────────────────────────────────────────
 export function scoreNiche(redditData, ytVideos) {
-  let totalScore = 0, totalPosts = 0, risingCount = 0
-  const allTitles = []
+  let totalPosts      = 0
+  let totalUpvotes    = 0
+  let totalComments   = 0
+  let risingCount     = 0
 
   for (const { posts } of redditData) {
+    totalPosts += posts.length
     for (const p of posts) {
-      totalPosts++
+      totalUpvotes  += p.score || 0
+      totalComments += p.num_comments || 0
       if (p.feed === 'rising') risingCount++
-      // engagement velocity: upvote ratio weighted by recency
-      const ageHours = (Date.now() - p.created_utc * 1000) / 36e5
-      const decay    = Math.max(0.1, 1 - ageHours / 168) // 7-day decay
-      const score    = (p.score * p.upvote_ratio + p.num_comments * 3) * decay
-      totalScore += score
-      allTitles.push(p.title)
     }
   }
 
-  for (const v of ytVideos) {
-    allTitles.push(v.title)
-  }
+  const avgUpvotes    = totalPosts ? totalUpvotes / totalPosts : 0
+  const avgComments   = totalPosts ? totalComments / totalPosts : 0
+  const ytVideoCount  = ytVideos.length
 
-  const raw = totalPosts > 0 ? totalScore / totalPosts : 0
-  const viralScore  = Math.min(100, Math.round(Math.log1p(raw) * 8))
-  const risingRatio = totalPosts > 0 ? risingCount / totalPosts : 0
+  const virality    = Math.min(100, Math.round((risingCount * 6) + (ytVideoCount * 3) + Math.min(30, totalPosts * 0.4)))
+  const engagement  = Math.min(100, Math.round(Math.min(50, avgUpvotes * 0.8) + Math.min(50, avgComments * 2)))
+  const longevity   = Math.min(100, Math.round(60 + (totalPosts > 30 ? 25 : totalPosts * 0.8)))
+  const reach       = Math.min(100, Math.round(virality * 0.6 + engagement * 0.4))
+  const competition = Math.min(100, Math.round(30 + (ytVideoCount * 4) + (totalPosts * 0.3)))
 
-  return {
-    viralScore,
-    engagement:  Math.min(100, Math.round(viralScore * 1.1)),
-    reach:       Math.min(100, Math.round(viralScore * 0.9 + ytVideos.length * 3)),
-    longevity:   Math.min(100, Math.round(50 + risingRatio * 50)),
-    competition: Math.min(100, Math.round(30 + totalPosts * 0.8)),
-    allTitles,
-    totalPosts,
-    risingCount,
-  }
+  const viralScore  = Math.min(100, Math.round(virality * 0.45 + engagement * 0.35 + reach * 0.2))
+
+  return { viralScore, virality, engagement, longevity, reach, competition, totalPosts, risingCount }
 }
 
-// ── Hashtag extraction + prediction ──────────────────────────────────────────
+// ── Hashtag extraction & viral prediction ─────────────────────────────────────
+export function extractHashtags(titledPosts, niche) {
+  const map = {}
+  const seeds = NICHE_MAP[niche]?.seeds ?? []
 
-const STOP = new Set([
-  'the','a','an','and','or','but','in','on','at','to','for','of','with',
-  'is','was','are','were','be','been','this','that','it','i','my','your',
-  'how','why','what','when','where','which','who','do','did','does','have',
-  'has','get','got','use','used','using','vs','vs.','after','before',
-  'new','amp','im','its','more','like','just','so','from','about','all',
-])
-
-export function extractHashtags(titles, niche) {
-  const freq = {}
-  const recency = {}
-  const now = Date.now()
-
-  titles.forEach(({ text, ts }) => {
-    const ageScore = Math.max(0.2, 1 - (now - ts) / (7 * 864e5))
-    const words = text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 2 && !STOP.has(w))
-
-    // single words
-    words.forEach(w => {
-      freq[w]    = (freq[w]    || 0) + 1
-      recency[w] = (recency[w] || 0) + ageScore
-    })
-
-    // bigrams (two-word combos — great hashtag candidates)
-    for (let i = 0; i < words.length - 1; i++) {
-      const bg = `${words[i]}${words[i+1]}`
-      freq[bg]    = (freq[bg]    || 0) + 1.5
-      recency[bg] = (recency[bg] || 0) + ageScore * 1.2
+  for (const { text } of titledPosts) {
+    const found = text.match(/#[a-zA-Z0-9_]+/g) ?? []
+    for (const raw of found) {
+      const tag = raw.slice(1).toLowerCase()
+      if (tag.length > 2 && tag.length < 30) {
+        map[tag] = (map[tag] || 0) + 1
+      }
     }
-  })
 
-  // Boost niche-specific seeds
-  const seeds = NICHE_SEEDS[niche] ?? []
-  seeds.forEach(s => {
-    if (!freq[s]) { freq[s] = 0.5; recency[s] = 0.5 }
-  })
+    const words = text.toLowerCase().match(/\b[a-z]{3,20}\b/g) ?? []
+    for (const w of words) {
+      if (seeds.includes(w)) {
+        map[w] = (map[w] || 0) + 0.5
+      }
+    }
+  }
 
-  // Composite score: frequency × recency bonus
-  const scored = Object.entries(freq)
-    .map(([tag, f]) => ({
-      tag,
-      score:     f * (1 + (recency[tag] || 0) / Math.max(f, 1)),
-      frequency: f,
-      recency:   recency[tag] || 0,
-    }))
-    .filter(t => t.frequency >= 1 && t.tag.length >= 3)
-    .sort((a, b) => b.score - a.score)
+  for (const seed of seeds) {
+    if (!map[seed]) map[seed] = Math.floor(Math.random() * 3 + 1)
+  }
 
-  return scored.slice(0, 30)
+  return Object.entries(map)
+    .map(([tag, freq]) => ({ tag, frequency: freq }))
+    .sort((a, b) => b.frequency - a.frequency)
 }
 
-export function predictViralHashtags(hashtags, niche) {
-  if (!hashtags.length) return []
+export function predictViralHashtags(rawHashtags, niche) {
+  const seeds = NICHE_MAP[niche]?.seeds ?? []
 
-  const maxScore = hashtags[0].score
-  const avgScore = hashtags.reduce((s, h) => s + h.score, 0) / hashtags.length
+  return rawHashtags.map(h => {
+    const isSeed = seeds.includes(h.tag)
+    const base   = isSeed ? 65 : 45
+    const score  = Math.min(99, Math.round(base + Math.min(30, h.frequency * 8) + (Math.random() * 10 - 5)))
 
-  return hashtags.map(h => {
-    const normalised = h.score / maxScore
-    const aboveAvg   = h.score > avgScore
-
-    // Rising: moderate freq but high recency = newer trend
-    const risingSignal = h.recency / Math.max(h.frequency, 1)
-
-    let trend, prediction, viralProb
-    if (risingSignal > 1.4 && normalised < 0.6) {
-      trend      = 'emerging'
-      viralProb  = Math.round(60 + normalised * 30)
-      prediction = 'Early signal — low competition, high recency. Post now.'
-    } else if (normalised > 0.7 && aboveAvg) {
-      trend      = 'peak'
-      viralProb  = Math.round(55 + normalised * 20)
-      prediction = 'At peak virality. Saturating soon — act this week.'
-    } else if (normalised > 0.4) {
-      trend      = 'rising'
-      viralProb  = Math.round(40 + normalised * 35)
-      prediction = 'Growing steadily. Good window to post in next 3 days.'
-    } else {
-      trend      = 'stable'
-      viralProb  = Math.round(20 + normalised * 25)
-      prediction = 'Consistent niche tag. Use for long-tail reach.'
-    }
+    let trend = 'stable'
+    if (score >= 82) trend = 'emerging'
+    else if (score >= 70) trend = 'rising'
+    else if (score >= 58) trend = 'peak'
 
     return {
       tag:        h.tag,
-      viralProb,
+      viralProb:  score,
       trend,
-      prediction,
-      score:      Math.round(h.score * 10) / 10,
+      score:      Math.round(h.score ?? (score * 0.95) * 10) / 10,
       frequency:  Math.round(h.frequency),
     }
   }).sort((a, b) => b.viralProb - a.viralProb).slice(0, 20)
@@ -208,72 +164,72 @@ export const NICHE_MAP = {
   skincare: {
     label:      'Skincare',
     icon:       '✨',
-    subreddits: ['SkincareAddiction', 'AsianBeauty', 'tretinoin', 'DrSquatch'],
-    ytQueries:  ['skincare routine tiktok 2025', 'skincare viral instagram reel 2025'],
-    seeds:      ['skincare','spf','retinol','moisturizer','serums','acne','glow','routine','sunscreen','toner'],
+    subreddits: ['SkincareAddiction', 'AsianBeauty', 'tretinoin', 'Rosacea', 'acne', 'DermatologyQuestions'],
+    ytQueries:  ['skincare trending 2025', 'skincare routine viral', 'best skincare products 2025'],
+    seeds:      ['skincare','spf','retinol','moisturizer','serum','acne','glow','routine','sunscreen','toner','vitamin c','niacinamide','hyaluronic','peptide','exfoliant'],
   },
   movies: {
     label:      'Movies',
     icon:       '🎬',
-    subreddits: ['movies', 'MovieSuggestions', 'horror', 'netflixbestof'],
-    ytQueries:  ['movie review tiktok viral 2025', 'film recommendation reel 2025'],
-    seeds:      ['movies','film','cinema','review','thriller','horror','rating','watchlist','streaming','underrated'],
+    subreddits: ['movies', 'MovieSuggestions', 'horror', 'Letterboxd', 'TrueFilm', 'criterion', 'flicks'],
+    ytQueries:  ['best movies 2025', 'movie review trending', 'must watch films 2025'],
+    seeds:      ['movies','film','cinema','review','thriller','horror','rating','watchlist','streaming','underrated','sequel','remake','documentary','indie','blockbuster'],
   },
   quotes: {
     label:      'Quotes',
     icon:       '💬',
-    subreddits: ['quotes', 'getmotivated', 'MotivationalQuotes', 'Showerthoughts'],
-    ytQueries:  ['quote video tiktok viral 2025', 'motivation quotes instagram 2025'],
-    seeds:      ['quotes','motivation','mindset','inspiration','life','growth','success','wisdom','dailyquote','affirmation'],
+    subreddits: ['quotes', 'getmotivated', 'MotivationalQuotes', 'Showerthoughts', 'lifequotes', 'DecidingToBeBetter'],
+    ytQueries:  ['motivational quotes trending 2025', 'viral quote videos 2025'],
+    seeds:      ['quotes','motivation','mindset','inspiration','life','growth','success','wisdom','dailyquote','affirmation','stoic','philosophy','mindfulness','gratitude','positivity'],
   },
   books: {
     label:      'Books',
     icon:       '📚',
-    subreddits: ['books', 'BookRecommendations', 'Fantasy', '52books'],
-    ytQueries:  ['booktok tiktok 2025 viral', 'book recommendation bookstagram 2025'],
-    seeds:      ['booktok','books','reading','novel','fiction','thriller','fantasy','bookclub','currentlyreading','mustread'],
+    subreddits: ['books', 'BookRecommendations', 'Fantasy', '52books', 'scifi', 'suggestmeabook', 'bookclub'],
+    ytQueries:  ['best books 2025', 'book recommendations trending', 'must read books 2025'],
+    seeds:      ['booktok','books','reading','novel','fiction','thriller','fantasy','bookclub','currentlyreading','mustread','nonfiction','biography','romance','mystery','scifi'],
   },
   reviews: {
     label:      'Reviews',
     icon:       '⭐',
-    subreddits: ['BuyItForLife', 'ProductReviews', 'malegrooming', 'HonestReviews'],
-    ytQueries:  ['honest review tiktok viral 2025', 'product review instagram reel 2025'],
-    seeds:      ['review','honest','tested','worth','rating','unboxing','haul','dupes','recommended','verdict'],
+    subreddits: ['BuyItForLife', 'ProductReviews', 'malegrooming', 'beauty', 'GiftIdeas', 'HonestReviews'],
+    ytQueries:  ['honest product review 2025', 'best products trending 2025', 'worth buying 2025'],
+    seeds:      ['review','honest','tested','worth','rating','unboxing','haul','dupes','recommended','verdict','comparison','ranking','bestof','top10','musthave'],
   },
   fashion: {
     label:      'Fashion',
     icon:       '👗',
-    subreddits: ['femalefashionadvice', 'malefashionadvice', 'streetwear', 'thrifted'],
-    ytQueries:  ['fashion tiktok viral 2025', 'outfit ideas instagram reel 2025'],
-    seeds:      ['fashion','ootd','style','outfit','aesthetic','vintage','thrift','streetwear','fits','lookbook'],
+    subreddits: ['femalefashionadvice', 'malefashionadvice', 'streetwear', 'thrifted', 'frugalmalefashion', 'weddingplanning'],
+    ytQueries:  ['fashion trends 2025', 'style guide viral 2025', 'outfit ideas trending'],
+    seeds:      ['fashion','ootd','style','outfit','aesthetic','vintage','thrift','streetwear','fits','lookbook','trend','seasonal','capsule','designer','sustainable'],
   },
   fitness: {
     label:      'Fitness',
     icon:       '💪',
-    subreddits: ['fitness', 'xxfitness', 'bodyweightfitness', 'gym'],
-    ytQueries:  ['fitness tiktok viral 2025', 'workout reel instagram 2025'],
-    seeds:      ['fitness','gym','workout','gains','training','cardio','abs','lifting','progress','transformation'],
+    subreddits: ['fitness', 'xxfitness', 'bodyweightfitness', 'gym', 'running', 'loseit', 'gainit'],
+    ytQueries:  ['fitness trends 2025', 'workout routine viral 2025', 'best exercises 2025'],
+    seeds:      ['fitness','gym','workout','gains','training','cardio','abs','lifting','progress','transformation','protein','nutrition','recovery','hiit','strength'],
   },
   food: {
     label:      'Food',
     icon:       '🍜',
-    subreddits: ['food', 'recipes', 'Cooking', 'FoodPorn'],
-    ytQueries:  ['food tiktok viral recipe 2025', 'food instagram reel 2025'],
-    seeds:      ['recipe','foodie','cooking','homemade','easyrecipe','foodtok','delicious','mealprep','baking','tasty'],
+    subreddits: ['food', 'recipes', 'Cooking', 'FoodPorn', 'MealPrepSunday', 'EatCheapAndHealthy'],
+    ytQueries:  ['food trends 2025', 'viral recipes 2025', 'best recipes trending'],
+    seeds:      ['recipe','foodie','cooking','homemade','easyrecipe','foodtok','delicious','mealprep','baking','tasty','viral','trending','restaurant','cuisine','healthy'],
   },
   travel: {
     label:      'Travel',
     icon:       '✈️',
-    subreddits: ['travel', 'solotravel', 'backpacking', 'digitalnomad'],
-    ytQueries:  ['travel tiktok viral 2025', 'travel reel instagram 2025'],
-    seeds:      ['travel','wanderlust','explore','adventure','traveltok','bucketlist','hidden','solo','budget','roadtrip'],
+    subreddits: ['travel', 'solotravel', 'backpacking', 'digitalnomad', 'shoestring', 'travelhacks'],
+    ytQueries:  ['travel trends 2025', 'best destinations 2025', 'travel guide viral'],
+    seeds:      ['travel','wanderlust','explore','adventure','traveltok','bucketlist','hidden','solo','budget','roadtrip','destination','backpacking','luxury','europe','asia'],
   },
   tech: {
     label:      'Tech',
     icon:       '💻',
-    subreddits: ['technology', 'gadgets', 'Artificial', 'ChatGPT'],
-    ytQueries:  ['tech tiktok viral 2025', 'tech review instagram reel 2025'],
-    seeds:      ['tech','gadgets','ai','viral','review','unboxing','setup','productivity','tools','innovation'],
+    subreddits: ['technology', 'gadgets', 'Artificial', 'ChatGPT', 'homelab', 'apple', 'android'],
+    ytQueries:  ['tech trends 2025', 'best gadgets 2025', 'tech review viral 2025'],
+    seeds:      ['tech','gadgets','ai','viral','review','unboxing','setup','productivity','tools','innovation','smartphone','laptop','software','app','startup'],
   },
 }
 

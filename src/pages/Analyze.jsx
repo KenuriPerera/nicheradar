@@ -8,6 +8,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis,
   Radar, ResponsiveContainer, Tooltip
 } from 'recharts'
+import clsx from 'clsx'
 import { analyzeTrend } from '../utils/api'
 import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
@@ -21,6 +22,7 @@ export default function Analyze() {
   const [params]    = useSearchParams()
   const [niche,     setNiche]     = useState(params.get('niche') || 'skincare')
   const [platform,  setPlatform]  = useState('both')
+  const [noFace,    setNoFace]    = useState(false)
   const [data,      setData]      = useState(null)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
@@ -30,7 +32,7 @@ export default function Analyze() {
     setError(null)
     setData(null)
     try {
-      const res = await analyzeTrend(niche, platform)
+      const res = await analyzeTrend(niche, platform, noFace)
       setData(res)
     } catch (e) {
       setError(e.message)
@@ -89,6 +91,21 @@ export default function Analyze() {
             </select>
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end">
+          <button
+            onClick={() => setNoFace(!noFace)}
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border transition-all duration-200',
+              noFace
+                ? 'bg-radar-accent border-radar-accent text-white'
+                : 'border-radar-border text-radar-muted hover:border-radar-accent hover:text-white'
+            )}
+          >
+            <span>{noFace ? '👤' : '👥'}</span>
+            {noFace ? 'No-face mode' : 'All content'}
+          </button>
         </div>
 
         <button onClick={run} disabled={loading} className="btn-primary">
