@@ -14,13 +14,13 @@ const headers = {
 async function fetchNicheData(niche) {
   const cfg = NICHE_MAP[niche]
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('timeout')), 8000)
+    setTimeout(() => reject(new Error('timeout')), 10000)
   )
   try {
     const [redditData, ytVideos] = await Promise.race([
       Promise.all([
-        fetchReddit(cfg.subreddits.slice(0, 2), 20),
-        fetchYouTube(cfg.ytQueries.slice(0, 1), 6),
+        fetchReddit(cfg.subreddits.slice(0, 1), 10),
+        fetchYouTube(cfg.ytQueries.slice(0, 1), 3),
       ]),
       timeout
     ])
@@ -66,9 +66,9 @@ export const handler = async (event) => {
     return { statusCode: 200, headers, body: '' }
   }
 
-  // Fetch all niches in batches of 3
+  // Fetch all niches in batches of 2
   const allData = []
-  const BATCH = 3
+  const BATCH = 2
   for (let i = 0; i < NICHE_KEYS.length; i += BATCH) {
     const batch = NICHE_KEYS.slice(i, i + BATCH)
     const done  = await Promise.all(batch.map(fetchNicheData))

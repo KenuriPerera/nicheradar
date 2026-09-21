@@ -4,7 +4,7 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-const GEMINI_MODEL = 'gemini-1.5-flash' // free tier model
+const GEMINI_MODEL = 'gemini-2.0-flash' // free tier model
 
 // Upload file to Gemini Files API then analyze
 async function analyzeVideoFile(base64Data, mimeType) {
@@ -42,16 +42,31 @@ async function analyzeVideoURL(url) {
   const key = process.env.GEMINI_API_KEY
   if (!key) throw new Error('GEMINI_API_KEY not set')
 
-  // For URLs we use the inline URL approach
-  return analyzeWithGemini({ url })
+  const isYouTube = url.includes('youtube.com') || url.includes('youtu.be')
+  const isTikTok  = url.includes('tiktok.com')
+
+  if (!isYouTube && !isTikTok) {
+    throw new Error('Only YouTube and TikTok URLs are supported')
+  }
+
+  // Gemini cannot fetch video content from URLs directly
+  // We use it to analyze based on URL context + metadata inference
+  const contextPrompt = isYouTube
+    ? `I am sharing a YouTube video URL: ${url}
+       Based on the URL and your knowledge of YouTube content patterns, provide a detailed content analysis.
+       If you cannot access the video directly, analyze what you can infer and provide general guidance.`
+    : `I am sharing a TikTok video URL: ${url}
+       Based on the URL and your knowledge of TikTok content patterns, provide a detailed content analysis.`
+
+  return analyzeWithGemini({ url, contextPrompt })
 }
 
-async function analyzeWithGemini({ fileUri, mimeType, url }) {
+async function analyzeWithGemini({ fileUri, mimeType, url, contextPrompt }) {
   const key = process.env.GEMINI_API_KEY
 
   const videoPart = fileUri
     ? { fileData: { mimeType, fileUri } }
-    : { text: `Analyze this video: ${url}` }
+    : { text: contextPrompt ?? `Analyze this video URL and provide insights: ${url}` }
 
   const prompt = `You are an expert social media content analyst and video editor. Analyze this video thoroughly and return ONLY a valid JSON object with no markdown, no prose.
 
