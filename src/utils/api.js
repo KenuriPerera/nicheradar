@@ -56,4 +56,5 @@ export const getPostingTimes = (platform) =>
 export const getCurrency = (base = 'USD') =>
   fetch(`/api/currency?base=${base}`).then(handle)
 
-
+export const getIntelligence = () =>
+  fetch('/api/intelligence').then(handle)

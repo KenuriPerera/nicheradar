@@ -8,6 +8,7 @@ import History from './pages/History'
 import Monetize from './pages/Monetize'
 import PostingTimes from './pages/PostingTimes'
 import Currency from './pages/Currency'
+import Intelligence from './pages/Intelligence'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="compare"       element={<Compare />}       />
           <Route path="hashtags"      element={<Hashtags />}      />
           <Route path="history"       element={<History />}       />
+          <Route path="intelligence"  element={<Intelligence />} />
           <Route path="monetize"      element={<Monetize />}      />
           <Route path="posting-times" element={<PostingTimes />} />
           <Route path="currency"      element={<Currency />}      />
