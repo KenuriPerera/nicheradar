@@ -9,22 +9,61 @@ const headers = {
 
 const SUPPORTED = ['USD', 'EUR', 'GBP', 'LKR', 'AUD', 'CAD']
 
+const LKR_FALLBACK_RATE = 320 // approximate — updated by the secondary fetch
+
 async function fetchRates(base = 'USD') {
-  // Primary: frankfurter.app — free, no key, maintained by ECB data
+  const NON_LKR = ['USD', 'EUR', 'GBP', 'AUD', 'CAD']
+
   try {
-    const symbols = SUPPORTED.filter(c => c !== base).join(',')
-    const res = await fetch(`https://api.frankfurter.app/latest?from=${base}&to=${symbols}`)
-    if (!res.ok) throw new Error('Primary failed')
+    // Frankfurter handles all except LKR
+    const symbols = NON_LKR.filter(c => c !== base).join(',')
+    const url = base === 'LKR'
+      ? `https://api.frankfurter.app/latest?from=USD&to=${NON_LKR.filter(c => c !== 'USD').join(',')}`
+      : `https://api.frankfurter.app/latest?from=${base}&to=${symbols.length ? symbols : 'EUR'}`
+
+    const res  = await fetch(url)
+    if (!res.ok) throw new Error('Frankfurter failed')
     const data = await res.json()
-    return { base: data.base, rates: { [base]: 1, ...data.rates }, date: data.date }
+
+    let rates = { ...data.rates, [data.base]: 1 }
+
+    // Fetch LKR via open.er-api.com
+    const lkrRes  = await fetch(`https://open.er-api.com/v6/latest/USD`)
+    const lkrData = lkrRes.ok ? await lkrRes.json() : null
+    const lkrUSD  = lkrData?.rates?.LKR ?? LKR_FALLBACK_RATE
+
+    if (base === 'LKR') {
+      // Convert everything to LKR base
+      const usdToLkr = lkrUSD
+      const converted = {}
+      NON_LKR.forEach(c => {
+        if (c === 'USD') converted['USD'] = 1 / usdToLkr
+        else converted[c] = (rates[c] ?? 1) / usdToLkr
+      })
+      converted['LKR'] = 1
+      return { base: 'LKR', rates: converted, date: data.date }
+    }
+
+    // Add LKR to non-LKR base results
+    const baseToUSD = base === 'USD' ? 1 : (1 / (rates['USD'] ?? 1))
+    rates['LKR'] = lkrUSD * (base === 'USD' ? 1 : (rates['USD'] ? 1 / rates['USD'] : 1))
+
+    // Recalculate LKR relative to base
+    if (base !== 'USD') {
+      const usdRate = data.rates['USD'] ?? 1
+      rates['LKR'] = lkrUSD / (1 / usdRate)
+    }
+
+    return { base, rates, date: data.date }
   } catch {
-    // Fallback: exchangerate-api open endpoint
+    // Full fallback
     try {
-      const res = await fetch(`https://open.er-api.com/v6/latest/${base}`)
-      if (!res.ok) throw new Error('Fallback failed')
+      const res  = await fetch(`https://open.er-api.com/v6/latest/${base === 'LKR' ? 'USD' : base}`)
+      if (!res.ok) throw new Error('All failed')
       const data = await res.json()
       const filtered = {}
       SUPPORTED.forEach(c => { if (data.rates[c]) filtered[c] = data.rates[c] })
+      filtered[data.base] = 1
       return { base, rates: filtered, date: new Date().toISOString().split('T')[0] }
     } catch {
       return null

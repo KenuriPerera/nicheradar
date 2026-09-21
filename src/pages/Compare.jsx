@@ -11,12 +11,12 @@ import { SkeletonCard } from '../components/Skeleton'
 import { useNiches } from '../hooks/useNiches'
 
 export default function Compare() {
-  const { niches }  = useNiches()
-  const [niche,   setNiche]   = useState('skincare')
-  const [noFace,  setNoFace]  = useState(false)
-  const [data,    setData]    = useState(null)
+  const { niches } = useNiches()
+  const [niche, setNiche] = useState('skincare')
+  const [noFace, setNoFace] = useState(false)
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
+  const [error, setError] = useState(null)
 
   async function run() {
     setLoading(true)
@@ -33,10 +33,10 @@ export default function Compare() {
   }
 
   const chartData = data ? [
-    { metric: 'Reach',       TikTok: data.tiktok?.reach ?? 0,       Instagram: data.instagram?.reach ?? 0       },
-    { metric: 'Engagement',  TikTok: data.tiktok?.engagement ?? 0,  Instagram: data.instagram?.engagement ?? 0  },
-    { metric: 'Viral Score', TikTok: data.tiktok?.viralScore ?? 0,  Instagram: data.instagram?.viralScore ?? 0  },
-    { metric: 'Longevity',   TikTok: data.tiktok?.longevity ?? 0,   Instagram: data.instagram?.longevity ?? 0   },
+    { metric: 'Reach', TikTok: data.tiktok?.reach ?? 0, Instagram: data.instagram?.reach ?? 0 },
+    { metric: 'Engagement', TikTok: data.tiktok?.engagement ?? 0, Instagram: data.instagram?.engagement ?? 0 },
+    { metric: 'Viral Score', TikTok: data.tiktok?.viralScore ?? 0, Instagram: data.instagram?.viralScore ?? 0 },
+    { metric: 'Longevity', TikTok: data.tiktok?.longevity ?? 0, Instagram: data.instagram?.longevity ?? 0 },
   ] : []
 
   return (
@@ -91,7 +91,7 @@ export default function Compare() {
             <div className="loading-bar h-full w-full" />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
+            {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
           </div>
         </div>
       )}
@@ -127,8 +127,8 @@ export default function Compare() {
                   itemStyle={{ color: '#e2e8f0' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Bar dataKey="TikTok"    fill="#ff2d55" radius={[4,4,0,0]} />
-                <Bar dataKey="Instagram" fill="#e1306c" radius={[4,4,0,0]} />
+                <Bar dataKey="TikTok" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Instagram" fill="#06b6d4" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -163,9 +163,9 @@ function PlatformPanel({ platform, color, data }) {
         <ScoreRing score={data.viralScore ?? 0} label="Viral Score" size={80} />
         <div className="space-y-2 flex-1">
           {[
-            { label: 'Reach',      val: data.reach      },
+            { label: 'Reach', val: data.reach },
             { label: 'Engagement', val: data.engagement },
-            { label: 'Longevity',  val: data.longevity  },
+            { label: 'Longevity', val: data.longevity },
           ].map(({ label, val }) => (
             <div key={label}>
               <div className="flex justify-between text-xs mb-1">

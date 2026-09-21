@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Clock, Search, ChevronDown, Database, AlertCircle, RefreshCw } from 'lucide-react'
+import { Clock, Search, ChevronDown, Database, AlertCircle, RefreshCw, TrendingUp } from 'lucide-react'
 import { getHistory } from '../utils/api'
 import { SkeletonCard } from '../components/Skeleton'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
@@ -36,7 +36,7 @@ export default function History() {
     const dt = new Date(entry.created_at)
     const formattedDate = `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2, '0')}`
     const topTag = Array.isArray(entry.hashtags) && entry.hashtags.length > 0 ? entry.hashtags[0] : null
-    
+
     return {
       time: formattedDate,
       score: topTag?.score || 0,
@@ -160,6 +160,76 @@ export default function History() {
               ))}
             </div>
           </div>
+
+          {/* History Analyzer */}
+          {data.topHashtags?.length > 0 && (
+            <div className="card space-y-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-radar-accent" />
+                <h2 className="text-sm font-medium text-white">History Analysis — Findings</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Best performer */}
+                <div className="bg-radar-bg border border-radar-green/20 rounded-xl p-4 space-y-2">
+                  <p className="text-xs text-radar-green font-medium uppercase tracking-wider">Top Performer</p>
+                  <p className="text-xl font-mono text-white">
+                    #{data.topHashtags[0]?.tag}
+                  </p>
+                  <p className="text-xs text-radar-muted">
+                    Avg viral probability: <span className="text-radar-green font-medium">{data.topHashtags[0]?.avg_viral_prob}%</span>
+                  </p>
+                  <p className="text-xs text-radar-muted">
+                    Peak reached: <span className="text-radar-amber font-medium">{data.topHashtags[0]?.peak_viral_prob}%</span>
+                  </p>
+                </div>
+
+                {/* Most consistent */}
+                {(() => {
+                  const consistent = [...(data.topHashtags ?? [])]
+                    .filter(h => h.appearances >= 2)
+                    .sort((a, b) => (b.avg_viral_prob - b.min_viral_prob) - (a.avg_viral_prob - a.min_viral_prob))[0]
+                  return consistent ? (
+                    <div className="bg-radar-bg border border-radar-accent/20 rounded-xl p-4 space-y-2">
+                      <p className="text-xs text-radar-accent font-medium uppercase tracking-wider">Most Consistent</p>
+                      <p className="text-xl font-mono text-white">#{consistent.tag}</p>
+                      <p className="text-xs text-radar-muted">
+                        Appeared <span className="text-white font-medium">{consistent.appearances}x</span> in last {data.days} days
+                      </p>
+                      <p className="text-xs text-radar-muted">
+                        Stability: low variance across scans
+                      </p>
+                    </div>
+                  ) : null
+                })()}
+
+                {/* Momentum leader */}
+                {data.emerging?.[0] && (
+                  <div className="bg-radar-bg border border-radar-amber/20 rounded-xl p-4 space-y-2">
+                    <p className="text-xs text-radar-amber font-medium uppercase tracking-wider">Momentum Leader</p>
+                    <p className="text-xl font-mono text-white">#{data.emerging[0].tag}</p>
+                    <p className="text-xs text-radar-muted">
+                      Gained <span className="text-radar-amber font-medium">+{data.emerging[0].momentum}%</span> viral probability
+                    </p>
+                    <p className="text-xs text-radar-muted">Post this hashtag now — it is still rising</p>
+                  </div>
+                )}
+
+                {/* Summary insight */}
+                <div className="bg-radar-bg border border-radar-border rounded-xl p-4 space-y-2">
+                  <p className="text-xs text-radar-muted font-medium uppercase tracking-wider">Summary</p>
+                  <p className="text-xs text-radar-muted leading-relaxed">
+                    Over the last <span className="text-white">{data.days} days</span>, tracked <span className="text-white">{data.topHashtags.length}</span> hashtags for <span className="text-white capitalize">{data.niche}</span>.
+                    {data.emerging?.length > 0
+                      ? ` ${data.emerging.length} tag${data.emerging.length > 1 ? 's are' : ' is'} gaining momentum — prioritise these in your next posts.`
+                      : ' No strong momentum signals yet — run more scans to build data.'}
+                  </p>
+                  <p className="text-xs text-radar-muted leading-relaxed">
+                    Best performing tag on average: <span className="text-radar-accent font-mono">#{data.topHashtags[0]?.tag}</span> at {data.topHashtags[0]?.avg_viral_prob}% viral probability.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : data?.dbConnected ? (
         <div className="card text-center py-12 space-y-3">

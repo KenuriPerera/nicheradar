@@ -15,17 +15,23 @@ import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
 import { useNiches } from '../hooks/useNiches'
 
-const PLATFORMS = ['both', 'tiktok', 'instagram']
+const PLATFORMS = [
+  { key: 'both', label: 'All Platforms' },
+  { key: 'tiktok', label: '🎵 TikTok' },
+  { key: 'instagram', label: '📸 Instagram' },
+  { key: 'youtube', label: '▶️ YouTube' },
+  { key: 'pinterest', label: '📌 Pinterest' },
+]
 
 export default function Analyze() {
-  const { niches }  = useNiches()
-  const [params]    = useSearchParams()
-  const [niche,     setNiche]     = useState(params.get('niche') || 'skincare')
-  const [platform,  setPlatform]  = useState('both')
-  const [noFace,    setNoFace]    = useState(false)
-  const [data,      setData]      = useState(null)
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState(null)
+  const { niches } = useNiches()
+  const [params] = useSearchParams()
+  const [niche, setNiche] = useState(params.get('niche') || 'skincare')
+  const [platform, setPlatform] = useState('both')
+  const [noFace, setNoFace] = useState(false)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   async function run() {
     setLoading(true)
@@ -44,10 +50,10 @@ export default function Analyze() {
   useEffect(() => { run() }, [])
 
   const radarData = data ? [
-    { subject: 'Virality',    A: data.scores?.virality    ?? 0 },
-    { subject: 'Engagement',  A: data.scores?.engagement  ?? 0 },
-    { subject: 'Longevity',   A: data.scores?.longevity   ?? 0 },
-    { subject: 'Reach',       A: data.scores?.reach       ?? 0 },
+    { subject: 'Virality', A: data.scores?.virality ?? 0 },
+    { subject: 'Engagement', A: data.scores?.engagement ?? 0 },
+    { subject: 'Longevity', A: data.scores?.longevity ?? 0 },
+    { subject: 'Reach', A: data.scores?.reach ?? 0 },
     { subject: 'Competition', A: data.scores?.competition ?? 0 },
   ] : []
 
@@ -86,7 +92,7 @@ export default function Analyze() {
               className="w-full bg-radar-bg border border-radar-border text-white rounded-xl px-4 py-2.5 text-sm appearance-none pr-8 focus:outline-none focus:border-radar-accent"
             >
               {PLATFORMS.map(p => (
-                <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                <option key={p.key} value={p.key} className="capitalize">{p.label}</option>
               ))}
             </select>
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />
@@ -121,7 +127,7 @@ export default function Analyze() {
             <div className="loading-bar h-full w-full" />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
+            {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
           </div>
         </div>
       )}
@@ -273,9 +279,9 @@ function Section({ icon: Icon, title, children }) {
 
 function TrendBadge({ trend }) {
   const map = {
-    rising:  { label: '↑ Rising',  cls: 'text-radar-green bg-radar-green/10 border-radar-green/20' },
-    peak:    { label: '⚡ Peak',   cls: 'text-radar-amber bg-radar-amber/10 border-radar-amber/20' },
-    falling: { label: '↓ Falling', cls: 'text-radar-muted bg-radar-border border-radar-border'     },
+    rising: { label: '↑ Rising', cls: 'text-radar-green bg-radar-green/10 border-radar-green/20' },
+    peak: { label: '⚡ Peak', cls: 'text-radar-amber bg-radar-amber/10 border-radar-amber/20' },
+    falling: { label: '↓ Falling', cls: 'text-radar-muted bg-radar-border border-radar-border' },
   }
   const t = map[trend] || map.rising
   return <span className={`badge border ${t.cls}`}>{t.label}</span>
