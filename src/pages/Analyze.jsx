@@ -223,21 +223,57 @@ export default function Analyze() {
           {/* Posting times */}
           {data.postingTimes && (
             <Section icon={Clock} title="Best Posting Times">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {Object.entries(data.postingTimes).map(([plat, times]) => (
-                  <div key={plat} className="bg-radar-bg border border-radar-border rounded-xl p-4">
-                    <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: plat === 'tiktok' ? '#ff2d55' : '#e1306c' }}>
-                      {plat}
-                    </p>
+                  <div key={plat} className="bg-radar-bg border border-radar-border rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium uppercase tracking-wider"
+                        style={{ color: plat === 'tiktok' ? '#ff2d55' : plat === 'instagram' ? '#e1306c' : plat === 'youtube' ? '#ef4444' : '#e97316' }}>
+                        {plat}
+                      </p>
+                      {times.predicted !== undefined && (
+                        <span className={`badge border text-xs ${times.predicted
+                            ? 'bg-radar-green/10 text-radar-green border-radar-green/30'
+                            : 'bg-radar-amber/10 text-radar-amber border-radar-amber/30'
+                          }`}>
+                          {times.predicted ? '📊 Predicted from live data' : '⚡ Pattern-based default'}
+                        </span>
+                      )}
+                    </div>
+
+                    {times.message && (
+                      <p className="text-xs text-radar-muted italic">{times.message}</p>
+                    )}
+
+                    {/* Predicted slots */}
                     <div className="space-y-2">
-                      {times.map(({ day, time, reason }) => (
-                        <div key={day + time} className="flex items-center gap-3">
-                          <span className="text-xs font-mono text-radar-accent w-16">{time}</span>
-                          <span className="text-xs text-white w-20">{day}</span>
-                          <span className="text-xs text-radar-muted flex-1">{reason}</span>
+                      {(times.slots ?? times).map((s, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs font-mono text-radar-accent w-16">{s.time}</span>
+                          <span className="text-xs text-white w-24">{s.day}</span>
+                          <span className="text-xs text-radar-muted flex-1">{s.reason}</span>
+                          {s.source === 'live data' && (
+                            <span className="text-xs text-radar-green">live</span>
+                          )}
                         </div>
                       ))}
                     </div>
+
+                    {/* Hour heatmap if available */}
+                    {times.topHours?.length > 0 && (
+                      <div className="pt-2 border-t border-radar-border">
+                        <p className="text-xs text-radar-muted mb-2">Peak hours from data</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {times.topHours.map(h => (
+                            <div key={h.hour}
+                              className="bg-radar-accent/10 border border-radar-accent/20 rounded-lg px-3 py-1 text-xs text-radar-accent font-mono">
+                              {String(h.hour).padStart(2, '0')}:00
+                              <span className="text-radar-muted ml-1">({h.count} posts)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

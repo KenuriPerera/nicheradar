@@ -1,7 +1,7 @@
 import {
   fetchReddit, fetchYouTube,
   scoreNiche, extractHashtags, predictViralHashtags,
-  extractSoundSignals, NICHE_MAP
+  extractSoundSignals, predictPostingTimes, NICHE_MAP
 } from './_data.js'
 
 const headers = {
@@ -239,9 +239,27 @@ export const handler = async (event) => {
       ? filteredFormats
       : filteredFormats.map(f => ({ ...f, why: f.why.replace('No face needed — ', '').replace('no face needed', '').replace('No face, ', '') }))
 
+    // Predict posting times from actual data
+    const predictedTimes = predictPostingTimes(redditData, ytVideos)
+
+    // Merge predicted slots into platform-specific structure
+    const buildSlots = (platformKey) => ({
+      predicted: predictedTimes.predicted,
+      message: predictedTimes.message,
+      slots: predictedTimes.slots,
+      topDays: predictedTimes.topDays,
+      topHours: predictedTimes.topHours,
+      static: POSTING_TIMES[platformKey] ?? POSTING_TIMES.tiktok,
+    })
+
     const postingTimes = platform === 'both'
-      ? POSTING_TIMES
-      : { [platform]: POSTING_TIMES[platform] ?? POSTING_TIMES.tiktok }
+      ? {
+        tiktok: buildSlots('tiktok'),
+        instagram: buildSlots('instagram'),
+        youtube: buildSlots('youtube'),
+        pinterest: buildSlots('pinterest'),
+      }
+      : { [platform]: buildSlots(platform) }
 
     return {
       statusCode: 200,

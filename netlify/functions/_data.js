@@ -22,9 +22,9 @@ export async function fetchReddit(subreddits, limit = 50) {
         fetch(`https://www.reddit.com/r/${sub}/new.json?limit=${limit}`,
           { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
       ])
-      const hotPosts    = hot?.data?.children?.map(c => ({ ...c.data, feed: 'hot'    })) ?? []
+      const hotPosts = hot?.data?.children?.map(c => ({ ...c.data, feed: 'hot' })) ?? []
       const risingPosts = rising?.data?.children?.map(c => ({ ...c.data, feed: 'rising' })) ?? []
-      const newPosts    = newest?.data?.children?.map(c => ({ ...c.data, feed: 'new'    })) ?? []
+      const newPosts = newest?.data?.children?.map(c => ({ ...c.data, feed: 'new' })) ?? []
       results.push({ subreddit: sub, posts: [...hotPosts, ...risingPosts, ...newPosts] })
     } catch { continue }
   }
@@ -45,9 +45,9 @@ export async function fetchYouTube(queries, maxResults = 10) {
           const data = await res.json()
           for (const item of data.items ?? []) {
             videos.push({
-              title:       item.snippet.title,
-              published:   item.snippet.publishedAt,
-              channel:     item.snippet.channelTitle,
+              title: item.snippet.title,
+              published: item.snippet.publishedAt,
+              channel: item.snippet.channelTitle,
               description: item.snippet.description,
             })
           }
@@ -59,7 +59,7 @@ export async function fetchYouTube(queries, maxResults = 10) {
     // HTML fallback if no key or key failed
     try {
       const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
-      const res  = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } })
+      const res = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } })
       const html = await res.text()
 
       const titleMatches = [...html.matchAll(/"title":{"runs":\[{"text":"(.*?)"}\]/g)].map(m => m[1])
@@ -76,31 +76,31 @@ export async function fetchYouTube(queries, maxResults = 10) {
 
 // ── Niche scoring algorithm ───────────────────────────────────────────────────
 export function scoreNiche(redditData, ytVideos) {
-  let totalPosts      = 0
-  let totalUpvotes    = 0
-  let totalComments   = 0
-  let risingCount     = 0
+  let totalPosts = 0
+  let totalUpvotes = 0
+  let totalComments = 0
+  let risingCount = 0
 
   for (const { posts } of redditData) {
     totalPosts += posts.length
     for (const p of posts) {
-      totalUpvotes  += p.score || 0
+      totalUpvotes += p.score || 0
       totalComments += p.num_comments || 0
       if (p.feed === 'rising') risingCount++
     }
   }
 
-  const avgUpvotes    = totalPosts ? totalUpvotes / totalPosts : 0
-  const avgComments   = totalPosts ? totalComments / totalPosts : 0
-  const ytVideoCount  = ytVideos.length
+  const avgUpvotes = totalPosts ? totalUpvotes / totalPosts : 0
+  const avgComments = totalPosts ? totalComments / totalPosts : 0
+  const ytVideoCount = ytVideos.length
 
-  const virality    = Math.min(100, Math.round((risingCount * 6) + (ytVideoCount * 3) + Math.min(30, totalPosts * 0.4)))
-  const engagement  = Math.min(100, Math.round(Math.min(50, avgUpvotes * 0.8) + Math.min(50, avgComments * 2)))
-  const longevity   = Math.min(100, Math.round(60 + (totalPosts > 30 ? 25 : totalPosts * 0.8)))
-  const reach       = Math.min(100, Math.round(virality * 0.6 + engagement * 0.4))
+  const virality = Math.min(100, Math.round((risingCount * 6) + (ytVideoCount * 3) + Math.min(30, totalPosts * 0.4)))
+  const engagement = Math.min(100, Math.round(Math.min(50, avgUpvotes * 0.8) + Math.min(50, avgComments * 2)))
+  const longevity = Math.min(100, Math.round(60 + (totalPosts > 30 ? 25 : totalPosts * 0.8)))
+  const reach = Math.min(100, Math.round(virality * 0.6 + engagement * 0.4))
   const competition = Math.min(100, Math.round(30 + (ytVideoCount * 4) + (totalPosts * 0.3)))
 
-  const viralScore  = Math.min(100, Math.round(virality * 0.45 + engagement * 0.35 + reach * 0.2))
+  const viralScore = Math.min(100, Math.round(virality * 0.45 + engagement * 0.35 + reach * 0.2))
 
   return { viralScore, virality, engagement, longevity, reach, competition, totalPosts, risingCount }
 }
@@ -141,8 +141,8 @@ export function predictViralHashtags(rawHashtags, niche) {
 
   return rawHashtags.map(h => {
     const isSeed = seeds.includes(h.tag)
-    const base   = isSeed ? 65 : 45
-    const score  = Math.min(99, Math.round(base + Math.min(30, h.frequency * 8) + (Math.random() * 10 - 5)))
+    const base = isSeed ? 65 : 45
+    const score = Math.min(99, Math.round(base + Math.min(30, h.frequency * 8) + (Math.random() * 10 - 5)))
 
     let trend = 'stable'
     if (score >= 82) trend = 'emerging'
@@ -150,11 +150,11 @@ export function predictViralHashtags(rawHashtags, niche) {
     else if (score >= 58) trend = 'peak'
 
     return {
-      tag:        h.tag,
-      viralProb:  score,
+      tag: h.tag,
+      viralProb: score,
       trend,
-      score:      Math.round(h.score ?? (score * 0.95) * 10) / 10,
-      frequency:  Math.round(h.frequency),
+      score: Math.round(h.score ?? (score * 0.95) * 10) / 10,
+      frequency: Math.round(h.frequency),
     }
   }).sort((a, b) => b.viralProb - a.viralProb).slice(0, 20)
 }
@@ -162,21 +162,21 @@ export function predictViralHashtags(rawHashtags, niche) {
 // Extract trending audio signals from titles
 export function extractSoundSignals(titles, niche) {
   const NICHE_SOUNDS = {
-    skincare:  ['lo-fi study beats', 'ambient skincare routine', 'satisfying ASMR texture', 'trending pop instrumental', 'calm morning routine audio'],
-    movies:    ['cinematic orchestral hit', 'dramatic film score', 'trending movie quote audio', 'suspense build-up sound', 'iconic movie scene audio'],
-    quotes:    ['motivational piano', 'ambient rain background', 'lo-fi chill beats', 'epic orchestral swell', 'calming nature sounds'],
-    books:     ['cosy reading ambience', 'page flip ASMR', 'lo-fi bookshop beats', 'rain on window ambience', 'library white noise'],
-    reviews:   ['upbeat product reveal', 'satisfying unboxing sound', 'trending pop beat', 'clean UI notification sound', 'punchy review jingle'],
-    fashion:   ['trending runway beat', 'aesthetic vlog music', 'outfit transition whoosh', 'upbeat pop instrumental', 'editorial fashion audio'],
-    fitness:   ['high energy workout beat', 'motivational hip hop', 'pump-up EDM drop', 'running pace rhythm', 'gym ambient bass'],
-    food:      ['satisfying cooking ASMR', 'sizzle and chop sounds', 'upbeat kitchen pop', 'food reveal fanfare', 'cosy cafe ambience'],
-    travel:    ['epic travel cinematic', 'tropical ambient beats', 'adventure lo-fi', 'city ambience soundscape', 'wanderlust acoustic guitar'],
-    tech:      ['clean UI transition', 'tech unboxing pop', 'futuristic ambient sound', 'typing keyboard ASMR', 'product reveal chime'],
-    wellness:  ['meditation bowl sound', 'nature forest ambience', 'breathing exercise audio', 'calming binaural beats', 'morning birds ambience'],
-    pets:      ['cute notification pop', 'playful ukulele tune', 'funny pet reaction audio', 'cosy home ambience', 'happy upbeat jingle'],
-    gaming:    ['8-bit retro chiptune', 'epic boss battle music', 'victory fanfare sound', 'ambient game soundtrack', 'controller click ASMR'],
-    art:       ['drawing process lo-fi', 'brush stroke ASMR', 'creative focus beats', 'art timelapse ambient', 'sketchbook page flip'],
-    finance:   ['confident motivational beat', 'success montage music', 'professional ambient piano', 'upbeat entrepreneur audio', 'focused productivity lo-fi'],
+    skincare: ['lo-fi study beats', 'ambient skincare routine', 'satisfying ASMR texture', 'trending pop instrumental', 'calm morning routine audio'],
+    movies: ['cinematic orchestral hit', 'dramatic film score', 'trending movie quote audio', 'suspense build-up sound', 'iconic movie scene audio'],
+    quotes: ['motivational piano', 'ambient rain background', 'lo-fi chill beats', 'epic orchestral swell', 'calming nature sounds'],
+    books: ['cosy reading ambience', 'page flip ASMR', 'lo-fi bookshop beats', 'rain on window ambience', 'library white noise'],
+    reviews: ['upbeat product reveal', 'satisfying unboxing sound', 'trending pop beat', 'clean UI notification sound', 'punchy review jingle'],
+    fashion: ['trending runway beat', 'aesthetic vlog music', 'outfit transition whoosh', 'upbeat pop instrumental', 'editorial fashion audio'],
+    fitness: ['high energy workout beat', 'motivational hip hop', 'pump-up EDM drop', 'running pace rhythm', 'gym ambient bass'],
+    food: ['satisfying cooking ASMR', 'sizzle and chop sounds', 'upbeat kitchen pop', 'food reveal fanfare', 'cosy cafe ambience'],
+    travel: ['epic travel cinematic', 'tropical ambient beats', 'adventure lo-fi', 'city ambience soundscape', 'wanderlust acoustic guitar'],
+    tech: ['clean UI transition', 'tech unboxing pop', 'futuristic ambient sound', 'typing keyboard ASMR', 'product reveal chime'],
+    wellness: ['meditation bowl sound', 'nature forest ambience', 'breathing exercise audio', 'calming binaural beats', 'morning birds ambience'],
+    pets: ['cute notification pop', 'playful ukulele tune', 'funny pet reaction audio', 'cosy home ambience', 'happy upbeat jingle'],
+    gaming: ['8-bit retro chiptune', 'epic boss battle music', 'victory fanfare sound', 'ambient game soundtrack', 'controller click ASMR'],
+    art: ['drawing process lo-fi', 'brush stroke ASMR', 'creative focus beats', 'art timelapse ambient', 'sketchbook page flip'],
+    finance: ['confident motivational beat', 'success montage music', 'professional ambient piano', 'upbeat entrepreneur audio', 'focused productivity lo-fi'],
   }
 
   const sounds = NICHE_SOUNDS[niche] ?? NICHE_SOUNDS.reviews
@@ -191,114 +191,210 @@ export function extractSoundSignals(titles, niche) {
 // ── Niche config ──────────────────────────────────────────────────────────────
 export const NICHE_MAP = {
   skincare: {
-    label:      'Skincare',
-    icon:       '✨',
+    label: 'Skincare',
+    icon: '✨',
     subreddits: ['SkincareAddiction', 'AsianBeauty', 'tretinoin', 'Rosacea', 'acne', 'DermatologyQuestions'],
-    ytQueries:  ['skincare routine trending now', 'skincare viral instagram reel'],
-    seeds:      ['skincare','spf','retinol','moisturizer','serum','acne','glow','routine','sunscreen','toner','vitamin c','niacinamide','hyaluronic','peptide','exfoliant'],
+    ytQueries: ['skincare routine trending now', 'skincare viral instagram reel'],
+    seeds: ['skincare', 'spf', 'retinol', 'moisturizer', 'serum', 'acne', 'glow', 'routine', 'sunscreen', 'toner', 'vitamin c', 'niacinamide', 'hyaluronic', 'peptide', 'exfoliant'],
   },
   movies: {
-    label:      'Movies',
-    icon:       '🎬',
+    label: 'Movies',
+    icon: '🎬',
     subreddits: ['movies', 'MovieSuggestions', 'horror', 'Letterboxd', 'TrueFilm', 'criterion', 'flicks'],
-    ytQueries:  ['best movies trending now', 'movie review trending', 'must watch films viral'],
-    seeds:      ['movies','film','cinema','review','thriller','horror','rating','watchlist','streaming','underrated','sequel','remake','documentary','indie','blockbuster'],
+    ytQueries: ['best movies trending now', 'movie review trending', 'must watch films viral'],
+    seeds: ['movies', 'film', 'cinema', 'review', 'thriller', 'horror', 'rating', 'watchlist', 'streaming', 'underrated', 'sequel', 'remake', 'documentary', 'indie', 'blockbuster'],
   },
   quotes: {
-    label:      'Quotes',
-    icon:       '💬',
+    label: 'Quotes',
+    icon: '💬',
     subreddits: ['quotes', 'getmotivated', 'MotivationalQuotes', 'Showerthoughts', 'lifequotes', 'DecidingToBeBetter'],
-    ytQueries:  ['motivational quotes trending now', 'viral quote videos'],
-    seeds:      ['quotes','motivation','mindset','inspiration','life','growth','success','wisdom','dailyquote','affirmation','stoic','philosophy','mindfulness','gratitude','positivity'],
+    ytQueries: ['motivational quotes trending now', 'viral quote videos'],
+    seeds: ['quotes', 'motivation', 'mindset', 'inspiration', 'life', 'growth', 'success', 'wisdom', 'dailyquote', 'affirmation', 'stoic', 'philosophy', 'mindfulness', 'gratitude', 'positivity'],
   },
   books: {
-    label:      'Books',
-    icon:       '📚',
+    label: 'Books',
+    icon: '📚',
     subreddits: ['books', 'BookRecommendations', 'Fantasy', '52books', 'scifi', 'suggestmeabook', 'bookclub'],
-    ytQueries:  ['best books trending now', 'book recommendations trending', 'must read books viral'],
-    seeds:      ['booktok','books','reading','novel','fiction','thriller','fantasy','bookclub','currentlyreading','mustread','nonfiction','biography','romance','mystery','scifi'],
+    ytQueries: ['best books trending now', 'book recommendations trending', 'must read books viral'],
+    seeds: ['booktok', 'books', 'reading', 'novel', 'fiction', 'thriller', 'fantasy', 'bookclub', 'currentlyreading', 'mustread', 'nonfiction', 'biography', 'romance', 'mystery', 'scifi'],
   },
   reviews: {
-    label:      'Reviews',
-    icon:       '⭐',
+    label: 'Reviews',
+    icon: '⭐',
     subreddits: ['BuyItForLife', 'ProductReviews', 'malegrooming', 'beauty', 'GiftIdeas', 'HonestReviews'],
-    ytQueries:  ['honest product review trending', 'best products trending', 'worth buying viral'],
-    seeds:      ['review','honest','tested','worth','rating','unboxing','haul','dupes','recommended','verdict','comparison','ranking','bestof','top10','musthave'],
+    ytQueries: ['honest product review trending', 'best products trending', 'worth buying viral'],
+    seeds: ['review', 'honest', 'tested', 'worth', 'rating', 'unboxing', 'haul', 'dupes', 'recommended', 'verdict', 'comparison', 'ranking', 'bestof', 'top10', 'musthave'],
   },
   fashion: {
-    label:      'Fashion',
-    icon:       '👗',
+    label: 'Fashion',
+    icon: '👗',
     subreddits: ['femalefashionadvice', 'malefashionadvice', 'streetwear', 'thrifted', 'frugalmalefashion', 'weddingplanning'],
-    ytQueries:  ['fashion trends now', 'style guide viral', 'outfit ideas trending'],
-    seeds:      ['fashion','ootd','style','outfit','aesthetic','vintage','thrift','streetwear','fits','lookbook','trend','seasonal','capsule','designer','sustainable'],
+    ytQueries: ['fashion trends now', 'style guide viral', 'outfit ideas trending'],
+    seeds: ['fashion', 'ootd', 'style', 'outfit', 'aesthetic', 'vintage', 'thrift', 'streetwear', 'fits', 'lookbook', 'trend', 'seasonal', 'capsule', 'designer', 'sustainable'],
   },
   fitness: {
-    label:      'Fitness',
-    icon:       '💪',
+    label: 'Fitness',
+    icon: '💪',
     subreddits: ['fitness', 'xxfitness', 'bodyweightfitness', 'gym', 'running', 'loseit', 'gainit'],
-    ytQueries:  ['fitness trends now', 'workout routine viral', 'best exercises trending'],
-    seeds:      ['fitness','gym','workout','gains','training','cardio','abs','lifting','progress','transformation','protein','nutrition','recovery','hiit','strength'],
+    ytQueries: ['fitness trends now', 'workout routine viral', 'best exercises trending'],
+    seeds: ['fitness', 'gym', 'workout', 'gains', 'training', 'cardio', 'abs', 'lifting', 'progress', 'transformation', 'protein', 'nutrition', 'recovery', 'hiit', 'strength'],
   },
   food: {
-    label:      'Food',
-    icon:       '🍜',
+    label: 'Food',
+    icon: '🍜',
     subreddits: ['food', 'recipes', 'Cooking', 'FoodPorn', 'MealPrepSunday', 'EatCheapAndHealthy'],
-    ytQueries:  ['food trends now', 'viral recipes trending', 'best recipes trending'],
-    seeds:      ['recipe','foodie','cooking','homemade','easyrecipe','foodtok','delicious','mealprep','baking','tasty','viral','trending','restaurant','cuisine','healthy'],
+    ytQueries: ['food trends now', 'viral recipes trending', 'best recipes trending'],
+    seeds: ['recipe', 'foodie', 'cooking', 'homemade', 'easyrecipe', 'foodtok', 'delicious', 'mealprep', 'baking', 'tasty', 'viral', 'trending', 'restaurant', 'cuisine', 'healthy'],
   },
   travel: {
-    label:      'Travel',
-    icon:       '✈️',
+    label: 'Travel',
+    icon: '✈️',
     subreddits: ['travel', 'solotravel', 'backpacking', 'digitalnomad', 'shoestring', 'travelhacks'],
-    ytQueries:  ['travel trends now', 'best destinations viral', 'travel guide viral'],
-    seeds:      ['travel','wanderlust','explore','adventure','traveltok','bucketlist','hidden','solo','budget','roadtrip','destination','backpacking','luxury','europe','asia'],
+    ytQueries: ['travel trends now', 'best destinations viral', 'travel guide viral'],
+    seeds: ['travel', 'wanderlust', 'explore', 'adventure', 'traveltok', 'bucketlist', 'hidden', 'solo', 'budget', 'roadtrip', 'destination', 'backpacking', 'luxury', 'europe', 'asia'],
   },
   tech: {
-    label:      'Tech',
-    icon:       '💻',
+    label: 'Tech',
+    icon: '💻',
     subreddits: ['technology', 'gadgets', 'Artificial', 'ChatGPT', 'homelab', 'apple', 'android'],
-    ytQueries:  ['tech trends now', 'best gadgets viral', 'tech review viral'],
-    seeds:      ['tech','gadgets','ai','viral','review','unboxing','setup','productivity','tools','innovation','smartphone','laptop','software','app','startup'],
+    ytQueries: ['tech trends now', 'best gadgets viral', 'tech review viral'],
+    seeds: ['tech', 'gadgets', 'ai', 'viral', 'review', 'unboxing', 'setup', 'productivity', 'tools', 'innovation', 'smartphone', 'laptop', 'software', 'app', 'startup'],
   },
   wellness: {
-    label:      'Wellness',
-    icon:       '🧘',
+    label: 'Wellness',
+    icon: '🧘',
     subreddits: ['mentalhealth', 'selfcare', 'meditation', 'anxiety', 'sleep', 'Mindfulness'],
-    ytQueries:  ['wellness trending now', 'self care routine viral', 'mental health tips viral'],
-    seeds:      ['wellness','selfcare','mentalhealth','meditation','anxiety','sleep','mindfulness','healing','therapy','burnout','stress','breathwork','journaling','gratitude','growth'],
+    ytQueries: ['wellness trending now', 'self care routine viral', 'mental health tips viral'],
+    seeds: ['wellness', 'selfcare', 'mentalhealth', 'meditation', 'anxiety', 'sleep', 'mindfulness', 'healing', 'therapy', 'burnout', 'stress', 'breathwork', 'journaling', 'gratitude', 'growth'],
   },
   pets: {
-    label:      'Pets',
-    icon:       '🐾',
+    label: 'Pets',
+    icon: '🐾',
     subreddits: ['aww', 'dogs', 'cats', 'AnimalsBeingBros', 'PetAdvice', 'puppy'],
-    ytQueries:  ['pet care trending now', 'cute pet viral', 'dog training tips viral'],
-    seeds:      ['pets','dogs','cats','puppy','kitten','petcare','training','grooming','adoption','rescue','animallover','petmom','petdad','cuteanimals','petsofinstagram'],
+    ytQueries: ['pet care trending now', 'cute pet viral', 'dog training tips viral'],
+    seeds: ['pets', 'dogs', 'cats', 'puppy', 'kitten', 'petcare', 'training', 'grooming', 'adoption', 'rescue', 'animallover', 'petmom', 'petdad', 'cuteanimals', 'petsofinstagram'],
   },
   gaming: {
-    label:      'Gaming',
-    icon:       '🎮',
+    label: 'Gaming',
+    icon: '🎮',
     subreddits: ['gaming', 'pcgaming', 'GameDeals', 'indiegaming', 'patientgamers'],
-    ytQueries:  ['gaming trending now', 'viral game clips', 'best games viral'],
-    seeds:      ['gaming','gamer','gameplay','review','indie','rpg','fps','strategy','esports','streaming','twitch','clips','playthrough','tips','hidden'],
+    ytQueries: ['gaming trending now', 'viral game clips', 'best games viral'],
+    seeds: ['gaming', 'gamer', 'gameplay', 'review', 'indie', 'rpg', 'fps', 'strategy', 'esports', 'streaming', 'twitch', 'clips', 'playthrough', 'tips', 'hidden'],
   },
   art: {
-    label:      'Art & Design',
-    icon:       '🎨',
+    label: 'Art & Design',
+    icon: '🎨',
     subreddits: ['Art', 'design', 'graphic_design', 'DigitalArt', 'illustration', 'drawing'],
-    ytQueries:  ['art viral trending', 'digital art process viral', 'drawing tutorial trending'],
-    seeds:      ['art','design','illustration','digitalart','drawing','painting','creative','sketch','artwork','commission','artist','procreate','aesthetic','portfolio','artprocess'],
+    ytQueries: ['art viral trending', 'digital art process viral', 'drawing tutorial trending'],
+    seeds: ['art', 'design', 'illustration', 'digitalart', 'drawing', 'painting', 'creative', 'sketch', 'artwork', 'commission', 'artist', 'procreate', 'aesthetic', 'portfolio', 'artprocess'],
   },
   finance: {
-    label:      'Finance',
-    icon:       '💰',
+    label: 'Finance',
+    icon: '💰',
     subreddits: ['personalfinance', 'investing', 'financialindependence', 'frugal', 'Entrepreneur'],
-    ytQueries:  ['personal finance viral trending', 'money tips viral', 'investing trending now'],
-    seeds:      ['finance','money','investing','savings','budget','wealth','income','sidehustle','passive','crypto','stocks','debt','freedom','retire','frugal'],
+    ytQueries: ['personal finance viral trending', 'money tips viral', 'investing trending now'],
+    seeds: ['finance', 'money', 'investing', 'savings', 'budget', 'wealth', 'income', 'sidehustle', 'passive', 'crypto', 'stocks', 'debt', 'freedom', 'retire', 'frugal'],
   },
 }
 
 // Auto-derived — never edit these manually
-export const NICHE_KEYS  = Object.keys(NICHE_MAP)
+export const NICHE_KEYS = Object.keys(NICHE_MAP)
 export const NICHE_SEEDS = Object.fromEntries(
   Object.entries(NICHE_MAP).map(([k, v]) => [k, v.seeds])
 )
+
+// Analyze actual post timestamps to predict best posting windows
+export function predictPostingTimes(redditData, ytVideos) {
+  const hourScores = {}  // hour  0-23 → { totalScore, count }
+  const dayScores = {}  // day   0-6  → { totalScore, count }
+
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+  // Score each Reddit post by engagement × recency
+  for (const { posts } of redditData) {
+    for (const p of posts) {
+      if (!p.created_utc) continue
+      const date = new Date(p.created_utc * 1000)
+      const hour = date.getUTCHours()
+      const day = date.getUTCDay()
+      const ageHrs = (Date.now() - date.getTime()) / 36e5
+      const decay = Math.max(0.1, 1 - ageHrs / 168)
+      const score = (p.score * (p.upvote_ratio ?? 1) + p.num_comments * 3) * decay
+
+      if (!hourScores[hour]) hourScores[hour] = { total: 0, count: 0 }
+      if (!dayScores[day]) dayScores[day] = { total: 0, count: 0 }
+
+      hourScores[hour].total += score
+      hourScores[hour].count += 1
+      dayScores[day].total += score
+      dayScores[day].count += 1
+    }
+  }
+
+  // Score each YouTube video by recency signal
+  for (const v of ytVideos) {
+    if (!v.published) continue
+    const date = new Date(v.published)
+    const hour = date.getUTCHours()
+    const day = date.getUTCDay()
+    const score = 10 // YouTube doesn't give view counts on search results
+
+    if (!hourScores[hour]) hourScores[hour] = { total: 0, count: 0 }
+    if (!dayScores[day]) dayScores[day] = { total: 0, count: 0 }
+
+    hourScores[hour].total += score
+    hourScores[hour].count += 1
+    dayScores[day].total += score
+    dayScores[day].count += 1
+  }
+
+  // Calculate average score per hour and day
+  const hourAvg = Object.entries(hourScores).map(([h, v]) => ({
+    hour: parseInt(h),
+    avg: v.count > 0 ? v.total / v.count : 0,
+    count: v.count,
+  })).sort((a, b) => b.avg - a.avg)
+
+  const dayAvg = Object.entries(dayScores).map(([d, v]) => ({
+    day: parseInt(d),
+    label: DAYS[parseInt(d)],
+    avg: v.count > 0 ? v.total / v.count : 0,
+    count: v.count,
+  })).sort((a, b) => b.avg - a.avg)
+
+  // Build top 3 posting windows — best day + best hour combos
+  const topDays = dayAvg.slice(0, 3)
+  const topHours = hourAvg.slice(0, 3)
+
+  const slots = topDays.map((d, i) => {
+    const h = topHours[i] ?? topHours[0]
+    const time = `${String(h.hour).padStart(2, '0')}:00`
+    return {
+      day: d.label,
+      time,
+      reason: `Analysed from ${d.count + h.count} real posts — peak engagement window for this niche`,
+      score: Math.round((d.avg + h.avg) / 2),
+      source: 'live data',
+    }
+  })
+
+  // Fallback if not enough data
+  if (slots.length < 2) {
+    return {
+      predicted: false,
+      message: 'Not enough post data to predict — showing pattern-based defaults',
+      slots: [
+        { day: 'Wednesday', time: '12:00', reason: 'Default mid-week peak — run more scans for live prediction', source: 'default' },
+        { day: 'Saturday', time: '11:00', reason: 'Default weekend peak — run more scans for live prediction', source: 'default' },
+      ]
+    }
+  }
+
+  return {
+    predicted: true,
+    message: `Predicted from ${redditData.reduce((s, r) => s + r.posts.length, 0) + ytVideos.length} real posts analysed`,
+    slots,
+    topDays: dayAvg.slice(0, 5),
+    topHours: hourAvg.slice(0, 5),
+  }
+}
