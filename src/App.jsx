@@ -10,6 +10,7 @@ import PostingTimes from './pages/PostingTimes'
 import Currency from './pages/Currency'
 import Intelligence from './pages/Intelligence'
 import ContentAnalyzer from './pages/ContentAnalyzer'
+import TrendingPosts from './pages/TrendingPosts'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="history"          element={<History />}          />
           <Route path="intelligence"     element={<Intelligence />}     />
           <Route path="content-analyzer" element={<ContentAnalyzer />} />
+          <Route path="trending-posts"   element={<TrendingPosts />}   />
           <Route path="monetize"         element={<Monetize />}         />
           <Route path="posting-times"    element={<PostingTimes />}    />
           <Route path="currency"         element={<Currency />}         />

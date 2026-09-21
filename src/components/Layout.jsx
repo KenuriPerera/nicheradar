@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Search, BarChart2, Hash, Clock, DollarSign, Calendar, ArrowRightLeft, Radio, Sparkles, Brain, Video } from 'lucide-react'
+import { LayoutDashboard, Search, BarChart2, Hash, Clock, DollarSign, Calendar, ArrowRightLeft, Radio, Sparkles, Brain, Video, Flame } from 'lucide-react'
 import clsx from 'clsx'
 
 const nav = [
@@ -10,6 +10,7 @@ const nav = [
   { to: '/history',          icon: Clock,            label: 'History'          },
   { to: '/intelligence',     icon: Brain,            label: 'Intelligence'     },
   { to: '/content-analyzer', icon: Video,            label: 'Content Analyzer' },
+  { to: '/trending-posts',   icon: Flame,            label: 'Trending Posts'   },
   { to: '/monetize',         icon: DollarSign,       label: 'Monetize'         },
   { to: '/posting-times',    icon: Calendar,         label: 'Posting Times'    },
   { to: '/currency',         icon: ArrowRightLeft,   label: 'Currency'         },

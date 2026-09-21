@@ -66,3 +66,9 @@ export const analyzeContent = (payload) =>
     body:    JSON.stringify(payload),
   }).then(handle)
 
+export const getTrendingPosts = (niche) =>
+  fetch('/api/trending-posts', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ niche }),
+  }).then(handle)
