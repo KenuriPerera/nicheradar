@@ -17,13 +17,13 @@ Built with React (Vite) + Netlify Functions + Supabase + free live data APIs.
 
 ## Tech stack
 
-| Layer | Technology | Cost |
+| Layer | Technology |
 |---|---|---|
-| Frontend | React + Vite | Free |
-| Hosting | Netlify | Free |
-| Functions | Netlify Serverless | Free |
-| Database | Supabase Postgres | Free |
-| Data sources | Reddit API + YouTube Data API | Free |
+| Frontend | React + Vite | 
+| Hosting | Netlify | 
+| Functions | Netlify Serverless | 
+| Database | Supabase Postgres | 
+| Data sources | Reddit API + YouTube Data API | 
 
 ---
 
@@ -91,11 +91,3 @@ nicheradar/
 
 ---
 
-## Usage limits (free tier)
-
-| Service | Free limit | Notes |
-|---|---|---|
-| Netlify | 125k function calls/month | More than enough for personal use |
-| Supabase | 500MB storage, 2GB bandwidth | Resets monthly |
-| YouTube API | 10,000 units/day | Each scan = 100 units |
-| Reddit API | ~60 requests/minute | No hard limit for public data |
