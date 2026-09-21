@@ -32,17 +32,12 @@ export default function History() {
   }, [niche, days])
 
   // Format historical snapshots for charting
-  const chartData = data?.history?.map(entry => {
-    const dt = new Date(entry.created_at)
-    const formattedDate = `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2, '0')}`
-    const topTag = Array.isArray(entry.hashtags) && entry.hashtags.length > 0 ? entry.hashtags[0] : null
-
-    return {
-      time: formattedDate,
-      score: topTag?.score || 0,
-      hashtag: topTag?.tag || 'N/A',
-      count: Array.isArray(entry.hashtags) ? entry.hashtags.length : 0
-    }
+  const chartData = data?.chart?.dates?.map((date, idx) => {
+    const point = { time: date }
+    data.chart.series?.forEach(s => {
+      point[s.tag] = s.data[idx]
+    })
+    return point
   }) ?? []
 
   return (
@@ -94,16 +89,17 @@ export default function History() {
         </button>
       </div>
 
-      {/* DB Connection Status Banner */}
-      {data && !data.dbConnected && (
-        <div className="p-4 rounded-xl border border-radar-amber/30 bg-radar-amber/10 flex items-start gap-3">
-          <Database className="w-5 h-5 text-radar-amber shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-medium text-radar-amber">Postgres Database Not Connected</div>
-            <div className="text-xs text-radar-muted mt-1">
-              Connect a Vercel Postgres instance by setting <code className="bg-radar-surface px-1.5 py-0.5 rounded text-radar-accent">POSTGRES_URL</code> in your environment to automatically save and track hashtag snapshots over time.
-            </div>
+      {/* Empty State Banner */}
+      {data && (!data.topHashtags || data.topHashtags.length === 0) && (
+        <div className="card border-radar-amber/30 bg-radar-amber/5 space-y-3">
+          <div className="flex items-center gap-3">
+            <Database className="w-5 h-5 text-radar-amber flex-shrink-0" />
+            <p className="text-radar-amber font-medium text-sm">No history yet for {niche}</p>
           </div>
+          <p className="text-radar-muted text-sm leading-relaxed">
+            Go to the <strong className="text-white">Hashtags</strong> page, pick a niche and click <strong className="text-white">Scan Trends</strong>. 
+            Each scan saves data here. After a few scans the trend chart and history table will populate.
+          </p>
         </div>
       )}
 
@@ -120,7 +116,7 @@ export default function History() {
           <SkeletonCard />
           <SkeletonCard />
         </div>
-      ) : data?.dbConnected && chartData.length > 0 ? (
+      ) : data?.topHashtags?.length > 0 ? (
         <div className="space-y-6">
           <div className="card">
             <h3 className="text-white text-base font-medium mb-4 flex items-center gap-2">
@@ -136,7 +132,16 @@ export default function History() {
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', color: '#fff' }}
                   />
-                  <Line type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} dot={{ fill: '#7c3aed' }} name="Score" />
+                  {data.chart?.series?.slice(0, 5).map((s, idx) => (
+                    <Line
+                      key={s.tag}
+                      type="monotone"
+                      dataKey={s.tag}
+                      stroke={['#7c3aed', '#10b981', '#f59e0b', '#3b82f6', '#ec4899'][idx % 5]}
+                      strokeWidth={2}
+                      name={`#${s.tag}`}
+                    />
+                  ))}
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -145,16 +150,16 @@ export default function History() {
           <div className="card space-y-4">
             <h3 className="text-white text-base font-medium">Snapshot Logs</h3>
             <div className="divide-y divide-radar-border">
-              {data.history.map((snapshot) => (
-                <div key={snapshot.id} className="py-3 flex items-center justify-between text-sm">
+              {data.topHashtags.map((item) => (
+                <div key={item.tag} className="py-3 flex items-center justify-between text-sm">
                   <div>
-                    <span className="text-white font-medium">{snapshot.niche}</span>
+                    <span className="text-white font-medium">#{item.tag}</span>
                     <span className="text-radar-muted text-xs ml-3">
-                      {new Date(snapshot.created_at).toLocaleString()}
+                      Dominant trend: {item.dominant_trend || 'stable'}
                     </span>
                   </div>
                   <div className="text-radar-accent font-medium text-xs bg-radar-accent/10 px-2.5 py-1 rounded-full">
-                    {Array.isArray(snapshot.hashtags) ? snapshot.hashtags.length : 0} hashtags captured
+                    {item.avg_viral_prob}% avg viral prob ({item.appearances} appearances)
                   </div>
                 </div>
               ))}
@@ -230,14 +235,6 @@ export default function History() {
               </div>
             </div>
           )}
-        </div>
-      ) : data?.dbConnected ? (
-        <div className="card text-center py-12 space-y-3">
-          <Clock className="w-8 h-8 text-radar-muted mx-auto" />
-          <div className="text-white text-base font-medium">No snapshots recorded yet</div>
-          <p className="text-radar-muted text-xs max-w-sm mx-auto">
-            Scan hashtags in the Hashtags tab to save automatically your first Postgres snapshot!
-          </p>
         </div>
       ) : null}
     </div>

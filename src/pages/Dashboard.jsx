@@ -9,9 +9,9 @@ import { useNiches } from '../hooks/useNiches'
 
 export default function Dashboard() {
   const { niches } = useNiches()
-  const [data,    setData]    = useState(null)
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
+  const [error, setError] = useState(null)
   const [lastRun, setLastRun] = useState(null)
 
   async function load() {
@@ -56,7 +56,7 @@ export default function Dashboard() {
       {/* Error */}
       {error && (
         <div className="card border-red-500/30 bg-red-500/5 text-red-400 text-sm">
-          {error} — check your Netlify environment variables (YOUTUBE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY).
+          {error}
         </div>
       )}
 
@@ -64,9 +64,9 @@ export default function Dashboard() {
       {data && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Trending Niches',    value: data.summary?.trendingNiches   ?? '—', icon: TrendingUp, color: 'text-radar-green'  },
-            { label: 'Avg Viral Score',    value: data.summary?.avgViralScore    ?? '—', icon: Zap,        color: 'text-radar-amber'  },
-            { label: 'Best Posting Hour',  value: data.summary?.bestPostingHour  ?? '—', icon: Clock,      color: 'text-radar-accent2' },
+            { label: 'Trending Niches', value: data.summary?.trendingNiches ?? '—', icon: TrendingUp, color: 'text-radar-green' },
+            { label: 'Avg Viral Score', value: data.summary?.avgViralScore ?? '—', icon: Zap, color: 'text-radar-amber' },
+            { label: 'Best Posting Hour', value: data.summary?.bestPostingHour ?? '—', icon: Clock, color: 'text-radar-accent2' },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="card flex items-center gap-4">
               <div className={`p-3 rounded-xl bg-radar-border ${color}`}>

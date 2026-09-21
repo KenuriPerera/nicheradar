@@ -10,23 +10,32 @@ export function cors(res) {
 }
 
 // ── Reddit ────────────────────────────────────────────────────────────────────
-export async function fetchReddit(subreddits, limit = 50) {
+export async function fetchReddit(subreddits, limit = 15) {
   const results = []
   for (const sub of subreddits) {
     try {
-      const [hot, rising, newest] = await Promise.all([
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 5000) // 5s timeout per request
+
+      const [hot, rising] = await Promise.all([
         fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=${limit}`,
-          { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
-        fetch(`https://www.reddit.com/r/${sub}/rising.json?limit=${limit}`,
-          { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
-        fetch(`https://www.reddit.com/r/${sub}/new.json?limit=${limit}`,
-          { headers: { 'User-Agent': 'NicheRadar/1.0' } }).then(r => r.ok ? r.json() : null),
+          { headers: { 'User-Agent': 'NicheRadar/1.0' }, signal: controller.signal })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null),
+        fetch(`https://www.reddit.com/r/${sub}/rising.json?limit=5`,
+          { headers: { 'User-Agent': 'NicheRadar/1.0' }, signal: controller.signal })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null),
       ])
+
+      clearTimeout(timer)
+
       const hotPosts = hot?.data?.children?.map(c => ({ ...c.data, feed: 'hot' })) ?? []
       const risingPosts = rising?.data?.children?.map(c => ({ ...c.data, feed: 'rising' })) ?? []
-      const newPosts = newest?.data?.children?.map(c => ({ ...c.data, feed: 'new' })) ?? []
-      results.push({ subreddit: sub, posts: [...hotPosts, ...risingPosts, ...newPosts] })
-    } catch { continue }
+      results.push({ subreddit: sub, posts: [...hotPosts, ...risingPosts] })
+    } catch {
+      results.push({ subreddit: sub, posts: [] })
+    }
   }
   return results
 }

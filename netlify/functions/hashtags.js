@@ -42,7 +42,7 @@ export const handler = async (event) => {
     const scores    = scoreNiche(redditData, ytVideos)
 
     const hasDB = await dbAvailable()
-    if (hasDB) saveSnapshot(niche, predicted).catch(() => {})
+    if (hasDB) await saveSnapshot(niche, predicted).catch(err => console.log('SAVE ERROR:', err.message))
 
     return {
       statusCode: 200,
