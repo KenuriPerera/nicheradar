@@ -9,6 +9,7 @@ import Monetize from './pages/Monetize'
 import PostingTimes from './pages/PostingTimes'
 import Currency from './pages/Currency'
 import Intelligence from './pages/Intelligence'
+import ContentAnalyzer from './pages/ContentAnalyzer'
 
 export default function App() {
   return (
@@ -16,14 +17,15 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path="analyze"       element={<Analyze />}       />
-          <Route path="compare"       element={<Compare />}       />
-          <Route path="hashtags"      element={<Hashtags />}      />
-          <Route path="history"       element={<History />}       />
-          <Route path="intelligence"  element={<Intelligence />} />
-          <Route path="monetize"      element={<Monetize />}      />
-          <Route path="posting-times" element={<PostingTimes />} />
-          <Route path="currency"      element={<Currency />}      />
+          <Route path="analyze"          element={<Analyze />}          />
+          <Route path="compare"          element={<Compare />}          />
+          <Route path="hashtags"         element={<Hashtags />}         />
+          <Route path="history"          element={<History />}          />
+          <Route path="intelligence"     element={<Intelligence />}     />
+          <Route path="content-analyzer" element={<ContentAnalyzer />} />
+          <Route path="monetize"         element={<Monetize />}         />
+          <Route path="posting-times"    element={<PostingTimes />}    />
+          <Route path="currency"         element={<Currency />}         />
         </Route>
       </Routes>
     </BrowserRouter>

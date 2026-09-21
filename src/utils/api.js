@@ -58,3 +58,11 @@ export const getCurrency = (base = 'USD') =>
 
 export const getIntelligence = () =>
   fetch('/api/intelligence').then(handle)
+
+export const analyzeContent = (payload) =>
+  fetch('/api/analyze-content', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  }).then(handle)
+
