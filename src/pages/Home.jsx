@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Radio, TrendingUp, Hash, BarChart2, Brain, Flame, Video, DollarSign, Clock, RefreshCw } from 'lucide-react'
+import { Radio, TrendingUp, Hash, BarChart2, Brain, Flame, Video, DollarSign, Clock, RefreshCw, Activity } from 'lucide-react'
 import QuotaPanel from '../components/QuotaPanel'
+import { runHealthCheck } from '../utils/api'
+import clsx from 'clsx'
 
 const FEATURES = [
   { icon: TrendingUp, label: 'Dashboard',      path: '/',              desc: 'Live viral scores across all 15 niches'          },
@@ -18,6 +21,8 @@ const FEATURES = [
 
 export default function Home() {
   const nav = useNavigate()
+  const [healthLoading, setHealthLoading] = useState(false)
+  const [healthResult,  setHealthResult]  = useState(null)
 
   return (
     <div className="min-h-screen bg-radar-bg">
@@ -86,6 +91,78 @@ export default function Home() {
         {/* Quota tracker */}
         <div className="mt-8">
           <QuotaPanel />
+        </div>
+
+        {/* System Health */}
+        <div className="mt-8 card space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-radar-green" />
+              <div>
+                <h3 className="text-sm font-medium text-white">System Health</h3>
+                <p className="text-xs text-radar-muted">
+                  Auto-checks daily at 2pm Sri Lanka time · Uses zero API quota
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                setHealthLoading(true)
+                try {
+                  const res = await runHealthCheck()
+                  setHealthResult(res)
+                } catch (e) {
+                  setHealthResult({ error: e.message })
+                } finally {
+                  setHealthLoading(false)
+                }
+              }}
+              disabled={healthLoading}
+              className="btn-ghost text-sm"
+            >
+              <RefreshCw className={`w-4 h-4 ${healthLoading ? 'animate-spin' : ''}`} />
+              {healthLoading ? 'Checking...' : 'Run Check Now'}
+            </button>
+          </div>
+
+          {healthResult && !healthResult.error && (
+            <div className="space-y-2 animate-fade-in">
+              <div className={clsx(
+                'text-sm font-medium px-3 py-2 rounded-xl',
+                healthResult.summary.allGood
+                  ? 'bg-radar-green/10 text-radar-green border border-radar-green/30'
+                  : 'bg-red-500/10 text-red-400 border border-red-500/30'
+              )}>
+                {healthResult.summary.allGood
+                  ? `✅ All ${healthResult.summary.total} functions healthy`
+                  : `❌ ${healthResult.summary.failed} of ${healthResult.summary.total} functions failing`
+                }
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {healthResult.results.map(r => (
+                  <div key={r.name}
+                    className={clsx(
+                      'flex items-center justify-between px-3 py-2 rounded-xl border text-xs',
+                      r.passed
+                        ? 'bg-radar-green/5 border-radar-green/20'
+                        : 'bg-red-500/5 border-red-500/20'
+                    )}>
+                    <span className={r.passed ? 'text-white' : 'text-red-400'}>
+                      {r.passed ? '✅' : '❌'} {r.name}
+                    </span>
+                    <span className="text-radar-muted font-mono">{r.elapsed}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-radar-muted text-right">
+                {healthResult.summary.dateSL}
+              </p>
+            </div>
+          )}
+
+          {healthResult?.error && (
+            <p className="text-xs text-red-400">{healthResult.error}</p>
+          )}
         </div>
 
         {/* Free APIs used */}

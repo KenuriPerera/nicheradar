@@ -88,3 +88,6 @@ export const runMasterFetch = () =>
 
 export const getDailySummaries = () =>
   fetch('/api/daily-summaries').then(handle)
+
+export const runHealthCheck = () =>
+  fetch('/api/health-check').then(handle)

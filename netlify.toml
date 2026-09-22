@@ -1,10 +1,31 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  command   = "npm run build"
+  publish   = "dist"
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirect all API calls to functions
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# Function timeouts
+[functions."health-check"]
+  schedule = "0 8 * * *"
+  timeout  = 26
+
+[functions."master-fetch"]
+  schedule = "0 14 * * *"
+  timeout  = 26
 
 [functions."intelligence"]
   timeout = 26
@@ -17,17 +38,3 @@
 
 [functions."trending-posts"]
   timeout = 26
-
-[functions."master-fetch"]
-  schedule = "0 14 * * *"
-  timeout  = 26
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

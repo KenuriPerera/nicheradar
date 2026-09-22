@@ -1,93 +1,66 @@
-# NicheRadar
+# NicheRadar 🎯
 
-AI-powered viral trend intelligence for TikTok & Instagram creators.
-Built with React (Vite) + Netlify Functions + Supabase + free live data APIs.
+AI-powered viral trend intelligence for content creators.
+Track hashtags, analyze trends, find opportunities — all in one place.
 
----
+## Live URL
+https://YOUR-NETLIFY-URL.netlify.app
 
-## What it does
+## Features
+- **Dashboard** — live viral scores across 15 niches
+- **Analyze** — deep hashtag and format analysis per niche
+- **Compare** — TikTok vs Instagram head-to-head
+- **Hashtags** — live extraction and viral prediction
+- **History** — trend tracking over time
+- **Intelligence** — cross-niche momentum and opportunities
+- **Content Analyzer** — AI video analysis with platform predictions
+- **Trending Posts** — top posts, videos and audio signals
+- **Monetize** — Ko-fi, Gumroad, Payhip strategies per niche
+- **Posting Times** — best times to post per platform
+- **Currency** — live exchange rates with LKR first
+- **Home** — features overview and API quota tracker
 
-- Dashboard — live viral scores across all your niches
-- Analyze — deep hashtag, audio, format and timing analysis
-- Compare — TikTok vs Instagram head-to-head for any niche
-- Hashtags — live hashtag extraction and viral prediction
-- History — track how hashtag viral scores change over time
+## Tech Stack
+- **Frontend:** React + Vite + Tailwind CSS
+- **Hosting:** Netlify free tier
+- **Functions:** Netlify Serverless
+- **Database:** Supabase + MongoDB Atlas
+- **AI:** Google Gemini
+- **Data:** YouTube, NewsAPI, Hacker News
 
----
+## Environment Variables Required
+See `.env.local.example` for the list of required keys.
+Never commit actual API keys to GitHub.
 
-## Tech stack
+## Setup
+1. Clone the repository
+2. Copy `.env.local.example` to `.env.local`
+3. Fill in your API keys
+4. Run `npm install`
+5. Run `netlify dev`
 
-| Layer | Technology |
-|---|---|---|
-| Frontend | React + Vite | 
-| Hosting | Netlify | 
-| Functions | Netlify Serverless | 
-| Database | Supabase Postgres | 
-| Data sources | Reddit API + YouTube Data API | 
-
----
-
-## Data sources
-
-- Reddit API — no key needed, live data
-- YouTube Data API v3 — free 10,000 units/day
-- No AI cost — pure algorithm-based scoring
-
----
-
-## Environment variables
-
-Add these in Netlify → Site settings → Environment variables:
-
-YOUTUBE_API_KEY = AIzaSyYOUR_KEY
-SUPABASE_URL = https://xxxx.supabase.co
-SUPABASE_SERVICE_KEY = your-service-role-key
-
-
----
-
-## Local development
-
-```bash
-npm install
-cp .env.example .env.local
-# fill in your keys in .env.local
-npm install -g netlify-cli
-netlify dev
-```
-
----
-
-## Deploy
-
-1. Push to GitHub
-2. Connect repo on netlify.com
-3. Add environment variables
+## Deployment
+1. Create a Netlify account
+2. Connect your GitHub repository
+3. Add environment variables in Netlify dashboard
 4. Deploy
-5. Visit /api/migrate once to create the database table
+5. Visit `/api/migrate` once after deploy
+6. Lock auto-publishing to preserve build minutes
 
----
+## Data Sources
+| Source | Free Limit | Signup |
+|---|---|---|
+| YouTube Data API | 10,000 units/day | console.cloud.google.com |
+| NewsAPI | 100 requests/day | newsapi.org |
+| Hacker News API | Unlimited | No signup needed |
+| Gemini AI | 15 requests/day | aistudio.google.com |
+| Supabase | 500MB storage | supabase.com |
+| MongoDB Atlas | 512MB storage | mongodb.com/atlas |
+| Frankfurter | Unlimited | No signup needed |
 
-## Project structure
-
-nicheradar/
-├── netlify/
-│ └── functions/
-│ ├── _data.js # Reddit + YouTube data fetchers
-│ ├── _db.js # Supabase database queries
-│ ├── analyze.js # POST /api/analyze
-│ ├── compare.js # POST /api/compare
-│ ├── dashboard.js # GET /api/dashboard
-│ ├── hashtags.js # POST /api/hashtags
-│ ├── history.js # GET /api/history
-│ └── migrate.js # GET /api/migrate (run once)
-├── src/
-│ ├── components/
-│ ├── pages/
-│ └── utils/
-├── netlify.toml
-└── package.json
-
-
----
-
+## Architecture
+- Daily master scan scheduled at 2pm UTC
+- Smart niche tiers ranked by historical performance
+- MongoDB cache — functions read from cache first
+- Zero API calls after daily scan until next reset
+- Automated health check with email alerts
