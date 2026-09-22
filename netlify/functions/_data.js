@@ -37,7 +37,84 @@ export async function fetchReddit(subreddits, limit = 15) {
       results.push({ subreddit: sub, posts: [] })
     }
   }
+
+  // If Reddit returned no posts — fall back to NewsAPI + HN
+  const totalPosts = results.reduce((s, r) => s + r.posts.length, 0)
+  if (totalPosts === 0) {
+    console.log('Reddit returned 0 posts — switching to NewsAPI + Hacker News fallback')
+    const keyword = subreddits[0] ?? 'trending'
+    const [newsArticles, hnPosts] = await Promise.all([
+      fetchNewsAPI(keyword, 10),
+      subreddits.some(s => ['technology','gadgets','ChatGPT','Artificial'].includes(s))
+        ? fetchHackerNews(10)
+        : Promise.resolve([]),
+    ])
+    const fallbackPosts = [...newsArticles, ...hnPosts]
+    if (fallbackPosts.length > 0) {
+      results.push({ subreddit: 'news-fallback', posts: fallbackPosts })
+    }
+  }
+
   return results
+}
+
+// NewsAPI — 100 free requests/day
+export async function fetchNewsAPI(query, pageSize = 10) {
+  const key = process.env.NEWS_API_KEY
+  if (!key) return []
+  try {
+    const res = await fetch(
+      `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&sortBy=popularity&pageSize=${pageSize}&language=en&apiKey=${key}`,
+      { headers: { 'User-Agent': 'NicheRadar/1.0' } }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.articles ?? []).map(a => ({
+      title:       a.title,
+      source:      a.source?.name ?? 'News',
+      url:         a.url,
+      publishedAt: a.publishedAt,
+      description: a.description,
+      feed:        'news',
+      score:       0,
+      num_comments: 0,
+      upvote_ratio: 1,
+      created_utc: new Date(a.publishedAt).getTime() / 1000,
+      permalink:   a.url,
+      link_flair_text: a.source?.name,
+    }))
+  } catch { return [] }
+}
+
+// Hacker News — completely free, no key needed
+export async function fetchHackerNews(limit = 10) {
+  try {
+    const res = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json')
+    if (!res.ok) return []
+    const ids   = await res.json()
+    const top   = ids.slice(0, limit)
+    const items = await Promise.all(
+      top.map(id =>
+        fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      )
+    )
+    return items
+      .filter(i => i?.title && i?.url)
+      .map(i => ({
+        title:        i.title,
+        source:       'Hacker News',
+        url:          i.url,
+        score:        i.score ?? 0,
+        num_comments: i.descendants ?? 0,
+        upvote_ratio: 1,
+        created_utc:  i.time,
+        permalink:    `https://news.ycombinator.com/item?id=${i.id}`,
+        feed:         'hot',
+        link_flair_text: 'HN',
+      }))
+  } catch { return [] }
 }
 
 // ── YouTube (free data layer via official API key if available, else HTML search) ──

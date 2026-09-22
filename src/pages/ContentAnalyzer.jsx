@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Video, Link, Upload, Zap, TrendingUp, Edit3, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
-import { analyzeContent } from '../utils/api'
+import { analyzeContent, incrementQuota } from '../utils/api'
 import clsx from 'clsx'
 
 const PLATFORM_COLORS = {
@@ -51,7 +51,9 @@ export default function ContentAnalyzer() {
         const base64 = await toBase64(file)
         payload = { fileData: base64, mimeType: file.type }
       }
-      setData(await analyzeContent(payload))
+      const res = await analyzeContent(payload)
+      setData(res)
+      incrementQuota('gemini', 1).catch(() => {})
     } catch (e) {
       setError(e.message)
     } finally {

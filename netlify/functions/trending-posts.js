@@ -38,9 +38,10 @@ function extractAudioSignals(videos) {
 
 // Score Reddit posts by engagement
 function scorePost(p) {
+  if (!p?.created_utc) return p?.score ?? 0
   const ageHours = (Date.now() - p.created_utc * 1000) / 36e5
   const decay    = Math.max(0.1, 1 - ageHours / 168)
-  return Math.round((p.score * (p.upvote_ratio ?? 1) + p.num_comments * 3) * decay)
+  return Math.round(((p.score ?? 0) * (p.upvote_ratio ?? 1) + (p.num_comments ?? 0) * 3) * decay)
 }
 
 export const handler = async (event) => {
@@ -51,29 +52,52 @@ export const handler = async (event) => {
   const cfg = NICHE_MAP[niche]
   if (!cfg) return { statusCode: 400, headers, body: JSON.stringify({ error: `Unknown niche: ${niche}` }) }
 
-  const [redditData, ytVideos] = await Promise.all([
-    fetchReddit(cfg.subreddits, 25),
-    fetchYouTube(cfg.ytQueries,  15),
+  // Add abort timeout for Reddit
+  const redditPromise = Promise.race([
+    fetchReddit(cfg.subreddits.slice(0, 2), 20),
+    new Promise(r => setTimeout(() => r([]), 7000))
   ])
+
+  // YouTube only if key exists
+  const ytPromise = process.env.YOUTUBE_API_KEY
+    ? fetchYouTube(cfg.ytQueries.slice(0, 1), 10)
+    : Promise.resolve([])
+
+  const [redditData, ytVideos] = await Promise.all([
+    redditPromise,
+    ytPromise,
+  ])
+
+  console.log('Reddit data:', JSON.stringify(redditData.map(r => ({ sub: r.subreddit, posts: r.posts?.length ?? 0 }))))
+  console.log('YT videos:', ytVideos?.length ?? 0)
 
   // ── Top Reddit Posts ──────────────────────────────────────────────────────
   const allPosts = []
-  for (const { subreddit, posts } of redditData) {
+  for (const item of redditData ?? []) {
+    const posts = item?.posts ?? []
+    const subreddit = item?.subreddit ?? 'unknown'
     for (const p of posts) {
+      if (!p?.title) continue
       allPosts.push({
         title:       p.title,
         subreddit:   `r/${subreddit}`,
-        score:       p.score,
-        comments:    p.num_comments,
+        score:       p.score ?? 0,
+        comments:    p.num_comments ?? 0,
         upvoteRatio: Math.round((p.upvote_ratio ?? 1) * 100),
         engScore:    scorePost(p),
-        url:         `https://www.reddit.com${p.permalink}`,
-        feed:        p.feed,
-        ageHours:    Math.round((Date.now() - p.created_utc * 1000) / 36e5),
+        url:         p.permalink
+          ? `https://www.reddit.com${p.permalink}`
+          : `https://www.reddit.com/r/${subreddit}`,
+        feed:        p.feed ?? 'hot',
+        ageHours:    p.created_utc
+          ? Math.round((Date.now() - p.created_utc * 1000) / 36e5)
+          : 0,
         flair:       p.link_flair_text ?? null,
       })
     }
   }
+  console.log('Total posts built:', allPosts.length)
+  console.log('Top 3:', allPosts.slice(0,3).map(p => p.title))
 
   const topReddit = allPosts
     .sort((a, b) => b.engScore - a.engScore)
@@ -95,10 +119,9 @@ export const handler = async (event) => {
 
   // ── Trending Audio ────────────────────────────────────────────────────────
   // Pull from broader music-related YouTube search
-  const musicVideos = await fetchYouTube(
-    [`${niche} trending audio sound music`, `${niche} background music lofi`],
-    10
-  )
+  const musicVideos = process.env.YOUTUBE_API_KEY
+    ? await fetchYouTube([`${niche} trending audio sound music`], 6).catch(() => [])
+    : []
   const trendingAudio = extractAudioSignals([...ytVideos, ...musicVideos])
 
   // ── Summary ───────────────────────────────────────────────────────────────

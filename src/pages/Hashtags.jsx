@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Hash, TrendingUp, Zap, Search, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react'
-import { getHashtags } from '../utils/api'
+import { getHashtags, incrementQuota } from '../utils/api'
 import { SkeletonCard } from '../components/Skeleton'
 import clsx from 'clsx'
 import { useNiches } from '../hooks/useNiches'
@@ -22,7 +22,11 @@ export default function Hashtags() {
 
   async function run() {
     setLoading(true); setError(null); setData(null)
-    try { setData(await getHashtags(niche)) }
+    try {
+      const res = await getHashtags(niche)
+      setData(res)
+      incrementQuota('youtube', 100).catch(() => {})
+    }
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }

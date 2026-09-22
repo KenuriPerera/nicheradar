@@ -1,8 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { LayoutDashboard, Search, BarChart2, Hash, Clock, DollarSign, Calendar, ArrowRightLeft, Radio, Sparkles, Brain, Video, Flame } from 'lucide-react'
 import clsx from 'clsx'
+import QuotaPanel from './QuotaPanel'
 
 const nav = [
+  { to: '/home',             icon: Radio,            label: 'Home'             },
   { to: '/',                 icon: LayoutDashboard, label: 'Dashboard'        },
   { to: '/analyze',          icon: Search,          label: 'Analyze'          },
   { to: '/compare',          icon: BarChart2,        label: 'Compare'          },
@@ -15,6 +18,28 @@ const nav = [
   { to: '/posting-times',    icon: Calendar,         label: 'Posting Times'    },
   { to: '/currency',         icon: ArrowRightLeft,   label: 'Currency'         },
 ]
+
+function QuotaTracker() {
+  const quotas = [
+    { name: 'YouTube',    used: '?', total: '10,000', unit: 'units/day',  color: 'text-red-400'        },
+    { name: 'NewsAPI',    used: '?', total: '100',     unit: 'req/day',    color: 'text-radar-amber'    },
+    { name: 'Gemini',     used: '?', total: '15',      unit: 'req/day',    color: 'text-radar-accent2'  },
+    { name: 'Supabase',   used: '?', total: '500MB',   unit: 'storage',    color: 'text-radar-green'    },
+  ]
+
+  return (
+    <div className="px-4 pb-2 space-y-2">
+      <p className="text-xs text-radar-muted uppercase tracking-wider">API Quotas</p>
+      {quotas.map(q => (
+        <div key={q.name} className="flex items-center justify-between">
+          <span className={`text-xs ${q.color}`}>{q.name}</span>
+          <span className="text-xs text-radar-muted font-mono">{q.total} {q.unit}</span>
+        </div>
+      ))}
+      <p className="text-xs text-radar-muted opacity-50">Resets daily at midnight PT</p>
+    </div>
+  )
+}
 
 export default function Layout() {
   return (
@@ -31,7 +56,7 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -51,6 +76,7 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <QuotaTracker />
         <div className="p-4 border-t border-radar-border">
           <div className="flex items-center gap-2 text-xs text-radar-muted">
             <Sparkles className="w-3 h-3 text-radar-accent" />

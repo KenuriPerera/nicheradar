@@ -15,6 +15,13 @@
 [functions."dashboard"]
   timeout = 26
 
+[functions."trending-posts"]
+  timeout = 26
+
+[functions."master-fetch"]
+  schedule = "0 14 * * *"
+  timeout  = 26
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

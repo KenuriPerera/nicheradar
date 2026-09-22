@@ -12,12 +12,15 @@ import Intelligence from './pages/Intelligence'
 import ContentAnalyzer from './pages/ContentAnalyzer'
 import TrendingPosts from './pages/TrendingPosts'
 
+import Home from './pages/Home'
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="home"             element={<Home />}             />
           <Route path="analyze"          element={<Analyze />}          />
           <Route path="compare"          element={<Compare />}          />
           <Route path="hashtags"         element={<Hashtags />}         />

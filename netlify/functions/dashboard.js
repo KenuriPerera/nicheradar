@@ -3,6 +3,7 @@ import {
   scoreNiche, extractHashtags, predictViralHashtags,
   NICHE_MAP, NICHE_KEYS
 } from './_data.js'
+import { getCachedScan } from './_mongodb.js'
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,21 @@ const headers = {
 // Fetch one niche with a hard 8-second timeout
 async function fetchNiche(niche) {
   const cfg = NICHE_MAP[niche]
+
+  const cached = await getCachedScan(niche).catch(() => null)
+  if (cached) {
+    const emerging = (cached.hashtags ?? []).filter(h => h.trend === 'emerging')
+    const leading  = cached.viralScore > 55 ? 'tiktok' : cached.longevity > 55 ? 'instagram' : 'both'
+    return {
+      niche,
+      label: cfg.label,
+      icon: cfg.icon,
+      viralScore: cached.viralScore,
+      summary: `${cached.totalPosts ?? 0} posts · ${emerging.length} emerging`,
+      topHashtags: (cached.hashtags ?? []).slice(0, 4).map(h => typeof h === 'string' ? h : h.tag),
+      leadingPlatform: leading,
+    }
+  }
 
   const timeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('timeout')), 8000)

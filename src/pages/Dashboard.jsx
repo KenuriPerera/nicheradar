@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, Zap, Clock, ArrowRight, RefreshCw } from 'lucide-react'
-import { getDashboard } from '../utils/api'
+import { TrendingUp, Zap, Clock, ArrowRight, RefreshCw, Database } from 'lucide-react'
+import { getDashboard, runMasterFetch } from '../utils/api'
 import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
@@ -13,6 +13,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [lastRun, setLastRun] = useState(null)
+  const [masterLoading, setMasterLoading] = useState(false)
+  const [lastMaster,    setLastMaster]    = useState(null)
 
   async function load() {
     setLoading(true)
@@ -28,6 +30,19 @@ export default function Dashboard() {
     }
   }
 
+  async function triggerMaster() {
+    setMasterLoading(true)
+    try {
+      const res = await runMasterFetch()
+      setLastMaster(res.summary)
+      await load()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setMasterLoading(false)
+    }
+  }
+
   useEffect(() => { load() }, [])
 
   return (
@@ -39,11 +54,22 @@ export default function Dashboard() {
           <p className="text-radar-muted text-sm mt-1">
             Real-time viral intelligence across your niches
           </p>
+          {lastMaster && (
+            <p className="text-xs text-radar-accent mt-1">
+              Master scan: {lastMaster.nichesScanned} niches · {lastMaster.avgViralScore} avg score · ~{lastMaster.youtube_units_used} YT units used
+            </p>
+          )}
         </div>
-        <button onClick={load} disabled={loading} className="btn-ghost">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={triggerMaster} disabled={masterLoading} className="btn-ghost">
+            <Database className={`w-4 h-4 ${masterLoading ? 'animate-spin' : ''}`} />
+            {masterLoading ? 'Scanning all niches...' : 'Master Scan'}
+          </button>
+          <button onClick={load} disabled={loading} className="btn-ghost">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Loading bar */}

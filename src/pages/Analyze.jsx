@@ -9,7 +9,7 @@ import {
   Radar, ResponsiveContainer, Tooltip
 } from 'recharts'
 import clsx from 'clsx'
-import { analyzeTrend } from '../utils/api'
+import { analyzeTrend, incrementQuota } from '../utils/api'
 import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
@@ -40,6 +40,7 @@ export default function Analyze() {
     try {
       const res = await analyzeTrend(niche, platform, noFace)
       setData(res)
+      incrementQuota('youtube', 100).catch(() => {})
     } catch (e) {
       setError(e.message)
     } finally {

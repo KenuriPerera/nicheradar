@@ -3,6 +3,7 @@ import {
   scoreNiche, extractHashtags, predictViralHashtags,
   extractSoundSignals, predictPostingTimes, NICHE_MAP
 } from './_data.js'
+import { getCachedScan } from './_mongodb.js'
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -215,10 +216,18 @@ export const handler = async (event) => {
   if (!cfg) return { statusCode: 400, headers, body: JSON.stringify({ error: `Unknown niche: ${niche}` }) }
 
   try {
-    const [redditData, ytVideos] = await Promise.all([
-      fetchReddit(cfg.subreddits, 25),
-      fetchYouTube(cfg.ytQueries, 10),
-    ])
+    const cached = await getCachedScan(niche)
+    let redditData = cached?.reddit
+    let ytVideos   = cached?.youtube
+
+    if (!redditData || !ytVideos) {
+      const [rData, yVids] = await Promise.all([
+        fetchReddit(cfg.subreddits, 25),
+        fetchYouTube(cfg.ytQueries, 10),
+      ])
+      redditData = rData
+      ytVideos   = yVids
+    }
 
     const titledPosts = []
     for (const { posts } of redditData) {

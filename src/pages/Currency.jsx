@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw, ArrowLeftRight, TrendingUp } from 'lucide-react'
-import { getCurrency } from '../utils/api'
+import { getCurrency, incrementQuota } from '../utils/api'
 
 const CURRENCIES = ['LKR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD']
 
@@ -27,6 +27,7 @@ export default function Currency() {
       const res = await getCurrency(b)
       setRates(res.rates)
       setDate(res.date)
+      incrementQuota('frankfurter', 1).catch(() => {})
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }

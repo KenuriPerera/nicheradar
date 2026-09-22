@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Flame, ExternalLink, Music, Youtube, MessageSquare, ChevronDown, AlertCircle, ThumbsUp } from 'lucide-react'
-import { getTrendingPosts } from '../utils/api'
+import { getTrendingPosts, incrementQuota } from '../utils/api'
 import { useNiches } from '../hooks/useNiches'
 import { SkeletonCard } from '../components/Skeleton'
 import clsx from 'clsx'
@@ -21,7 +21,12 @@ export default function TrendingPosts() {
 
   async function run() {
     setLoading(true); setError(null); setData(null)
-    try { setData(await getTrendingPosts(niche)) }
+    try {
+      const res = await getTrendingPosts(niche)
+      setData(res)
+      incrementQuota('youtube', 200).catch(() => {})
+      incrementQuota('newsapi', 1).catch(() => {})
+    }
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }

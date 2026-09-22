@@ -48,7 +48,17 @@ export const getNiches = () =>
   fetch('/api/niches').then(handle)
 
 export const getMonetize = (niche) =>
-  fetch(`/api/monetize?niche=${niche}`).then(handle)
+  fetch(`/api/monetize?niche=${encodeURIComponent(niche)}`).then(handle)
+
+export const getQuotaStatus = () =>
+  fetch('/api/quota-status').then(handle)
+
+export const incrementQuota = (api, amount = 1) =>
+  fetch('/api/quota-status', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ api, amount }),
+  }).then(handle)
 
 export const getPostingTimes = (platform) =>
   fetch(`/api/posting-times${platform ? `?platform=${platform}` : ''}`).then(handle)
@@ -72,3 +82,9 @@ export const getTrendingPosts = (niche) =>
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ niche }),
   }).then(handle)
+
+export const runMasterFetch = () =>
+  fetch('/api/master-fetch', { method: 'POST' }).then(handle)
+
+export const getDailySummaries = () =>
+  fetch('/api/daily-summaries').then(handle)
