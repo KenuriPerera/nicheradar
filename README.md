@@ -23,8 +23,6 @@ Track hashtags, analyze trends, find opportunities — all in one place.
 - **AI:** Google Gemini 2.0 Flash (video analysis, 15 req/day free)
 - **Data Sources:** YouTube Data API v3, NewsAPI, Hacker News API
 
-## Niches Tracked (15)
-Skincare · Movies · Quotes · Books · Reviews · Fashion · Fitness · Food · Travel · Tech · Wellness · Pets · Gaming · Art · Finance
 
 ## Environment Variables Required
 See `.env.local.example` for the full list of required keys.
@@ -48,13 +46,4 @@ See `.env.local.example` for the full list of required keys.
 7. Visit `/api/migrate` once after deploy to create Supabase tables
 8. Lock auto-publishing to preserve build minutes
 
-## Data Sources
-| Source | Free Limit | Reset | Signup |
-|---|---|---|---|
-| YouTube Data API v3 | 10,000 units/day | Daily 1:30pm SL time | console.cloud.google.com |
-| NewsAPI | 100 requests/day | Daily midnight UTC | newsapi.org |
-| Hacker News API | Unlimited | Never | No signup needed |
-| Gemini AI | 15 requests/day | Daily 1:30pm SL time | aistudio.google.com |
-| Supabase | 500MB storage | Monthly | supabase.com |
-| MongoDB Atlas | 512MB storage | Monthly | mongodb.com/atlas |
-| Frankfurter Exchange Rates | Unlimited | Never | No signup needed |
+
