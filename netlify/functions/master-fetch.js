@@ -5,7 +5,7 @@ import {
 } from './_data.js'
 import { saveSnapshot, dbAvailable, getTopHashtagsHistory } from './_db.js'
 import {
-  saveMasterScan, saveNicheTiers, saveDailySummary,
+  saveMasterScan, saveNicheTiers, saveDailySummary, saveImprovData,
   mongoAvailable
 } from './_mongodb.js'
 
@@ -13,6 +13,196 @@ const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Content-Type': 'application/json',
+}
+
+function buildImprovCache(nicheResults, tiers) {
+  const date = new Date().toISOString().split('T')[0]
+
+  // Extract hooks from top performing titles
+  const hooks = {}
+  for (const n of nicheResults) {
+    const titles = [
+      ...(n.reddit ?? []).flatMap(r => r.posts ?? []).map(p => p.title),
+      ...(n.youtube ?? []).map(v => v.title),
+      ...(n.news ?? []).map(a => a.title),
+    ].filter(t => t && t.length > 10)
+
+    hooks[n.niche] = extractHooks(titles, n.niche)
+  }
+
+  // Extract audio trends from YouTube titles
+  const audioTrends = {}
+  for (const n of nicheResults) {
+    const ytTitles = (n.youtube ?? []).map(v => v.title)
+    audioTrends[n.niche] = extractAudioSignals(ytTitles)
+  }
+
+  // Build seasonality signals from recency patterns
+  const seasonality = buildSeasonality(nicheResults)
+
+  // Extract inspo channels from YouTube data
+  const inspoChannels = {}
+  for (const n of nicheResults) {
+    inspoChannels[n.niche] = [
+      ...(n.youtube ?? [])
+        .filter(v => v.channel)
+        .map(v => ({ channel: v.channel, title: v.title, videoId: v.videoId }))
+        .slice(0, 5)
+    ]
+  }
+
+  // Brand deal benchmarks per niche
+  const brandBenchmarks = buildBrandBenchmarks(nicheResults)
+
+  return {
+    date,
+    hooks,
+    audioTrends,
+    seasonality,
+    inspoChannels,
+    brandBenchmarks,
+    nicheRankings: nicheResults.map(n => ({
+      niche:      n.niche,
+      label:      n.label,
+      icon:       n.icon,
+      viralScore: n.viralScore,
+      tier:       n.tier,
+      topTag:     n.topTag,
+      emerging:   n.emerging?.length ?? 0,
+    })),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+function extractHooks(titles, niche) {
+  const HOOK_PATTERNS = [
+    { type: 'curiosity',     regex: /why|what|how|secret|nobody|truth|real|actually/i       },
+    { type: 'fomo',          regex: /everyone|viral|trending|you need|must|before|stop/i     },
+    { type: 'controversy',   regex: /unpopular|wrong|disagree|hot take|overrated|honest/i    },
+    { type: 'relatability',  regex: /pov|when you|me when|that feeling|anyone else|we all/i  },
+    { type: 'transformation',regex: /days|weeks|months|changed|result|glow|journey|went/i    },
+    { type: 'value',         regex: /tips|tricks|hacks|guide|ways|things|ideas|mistakes/i    },
+  ]
+
+  const hooks = []
+  for (const title of titles) {
+    for (const { type, regex } of HOOK_PATTERNS) {
+      if (regex.test(title)) {
+        hooks.push({
+          hook:  title.slice(0, 100),
+          type,
+          score: title.length > 20 && title.length < 80 ? 'high' : 'medium',
+        })
+        break
+      }
+    }
+  }
+
+  // Generate template hooks from patterns
+  const templates = [
+    { type: 'curiosity',     template: `The ${niche} secret nobody tells you about`              },
+    { type: 'fomo',          template: `Everyone is talking about this ${niche} trend`           },
+    { type: 'controversy',   template: `Unpopular opinion: most ${niche} content is wrong`       },
+    { type: 'relatability',  template: `POV: you just discovered ${niche} and now you're obsessed` },
+    { type: 'transformation',template: `I tried this ${niche} routine for 30 days — results`    },
+    { type: 'value',         template: `5 ${niche} mistakes you're probably making right now`    },
+  ]
+
+  return {
+    fromTitles: hooks.slice(0, 10),
+    templates,
+  }
+}
+
+function extractAudioSignals(titles) {
+  const AUDIO_KEYWORDS = [
+    'bgm','ost','soundtrack','lofi','beats','music','audio',
+    'sound','instrumental','ambient','theme','score',
+  ]
+  return titles
+    .filter(t => AUDIO_KEYWORDS.some(k => t.toLowerCase().includes(k)))
+    .slice(0, 6)
+    .map(t => ({ title: t, tiktokSearch: `https://www.tiktok.com/search?q=${encodeURIComponent(t)}` }))
+}
+
+function buildSeasonality(nicheResults) {
+  const months = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December',
+  ]
+  const currentMonth = new Date().getMonth()
+
+  // Map niches to seasonal peaks based on content signals
+  const peaks = {}
+  for (const n of nicheResults) {
+    const allText = [
+      ...(n.reddit ?? []).flatMap(r => r.posts ?? []).map(p => p.title),
+      ...(n.youtube ?? []).map(v => v.title),
+    ].join(' ').toLowerCase()
+
+    peaks[n.niche] = {
+      currentMonthScore: n.viralScore,
+      peakMonths:        detectPeakMonths(n.niche, allText),
+      currentMonth:      months[currentMonth],
+      isCurrentlyPeak:   n.viralScore > 50,
+    }
+  }
+  return peaks
+}
+
+function detectPeakMonths(niche, text) {
+  // Signal-based peak detection per niche
+  const SEASONAL_SIGNALS = {
+    skincare: ['summer','spf','winter','dry','cold','humid'],
+    fitness:  ['new year','resolution','summer body','beach'],
+    food:     ['christmas','thanksgiving','holiday','summer','bbq'],
+    travel:   ['summer','holiday','vacation','break','season'],
+    fashion:  ['spring','fall','winter','summer','season','trend'],
+    gifts:    ['christmas','birthday','valentine','mother','father'],
+  }
+  const signals = SEASONAL_SIGNALS[niche] ?? []
+  const matched = signals.filter(s => text.includes(s))
+  return matched.length > 0 ? matched : ['year-round']
+}
+
+function buildBrandBenchmarks(nicheResults) {
+  // Formula-based benchmarks — no API needed
+  const benchmarks = {}
+  for (const n of nicheResults) {
+    const viralScore = n.viralScore ?? 0
+    const multiplier = viralScore > 60 ? 1.5 : viralScore > 40 ? 1.2 : 1.0
+
+    benchmarks[n.niche] = {
+      micro:  { // 1k-10k followers
+        igPost:   Math.round(15  * multiplier),
+        igStory:  Math.round(8   * multiplier),
+        igReel:   Math.round(25  * multiplier),
+        ytVideo:  Math.round(50  * multiplier),
+        tiktok:   Math.round(20  * multiplier),
+        currency: 'USD',
+        lkrMultiplier: 330,
+      },
+      mid: { // 10k-100k followers
+        igPost:   Math.round(150  * multiplier),
+        igStory:  Math.round(75   * multiplier),
+        igReel:   Math.round(250  * multiplier),
+        ytVideo:  Math.round(500  * multiplier),
+        tiktok:   Math.round(200  * multiplier),
+        currency: 'USD',
+        lkrMultiplier: 330,
+      },
+      macro: { // 100k+ followers
+        igPost:   Math.round(1500  * multiplier),
+        igStory:  Math.round(750   * multiplier),
+        igReel:   Math.round(2500  * multiplier),
+        ytVideo:  Math.round(5000  * multiplier),
+        tiktok:   Math.round(2000  * multiplier),
+        currency: 'USD',
+        lkrMultiplier: 330,
+      },
+    }
+  }
+  return benchmarks
 }
 
 // Determine niche tiers from historical Supabase data
@@ -143,6 +333,11 @@ async function fetchNicheByTier(niche, tier) {
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
 
+  console.log('=== MASTER FETCH HANDLER CALLED ===')
+  console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET ✅' : 'NOT SET ❌')
+  console.log('YOUTUBE_API_KEY:', process.env.YOUTUBE_API_KEY ? 'SET ✅' : 'NOT SET ❌')
+  console.log('NEWS_API_KEY:', process.env.NEWS_API_KEY ? 'SET ✅' : 'NOT SET ❌')
+
   const isScheduled = event.httpMethod === 'GET' &&
     event.headers?.['x-netlify-event'] === 'schedule'
   const isManual    = event.httpMethod === 'POST' || event.httpMethod === 'GET'
@@ -163,39 +358,16 @@ export const handler = async (event) => {
     // Step 2 — Fetch niches in tier order (tier 1 first, highest priority)
     const results = []
 
-    // Tier 1 — deep fetch, sequential to manage quota
-    for (const niche of tiers.tier1) {
-      const data = await fetchNicheByTier(niche, 1)
-      if (data) {
-        results.push(data)
-        // Save to MongoDB cache
-        await saveMasterScan(niche, data)
-        // Save hashtags to Supabase history
-        if (data.hashtags?.length) {
-          saveSnapshot(niche, data.hashtags).catch(() => {})
-        }
-      }
-    }
-
-    // Tier 2 — medium fetch, parallel
-    const tier2Results = await Promise.all(
-      tiers.tier2.map(niche => fetchNicheByTier(niche, 2))
+    // Tier 1 — deep fetch, parallel
+    const tier1Results = await Promise.all(
+      tiers.tier1.map(niche => fetchNicheByTier(niche, 1))
     )
-    for (const data of tier2Results.filter(Boolean)) {
+    for (const data of tier1Results.filter(Boolean)) {
       results.push(data)
       await saveMasterScan(data.niche, data)
       if (data.hashtags?.length) {
         saveSnapshot(data.niche, data.hashtags).catch(() => {})
       }
-    }
-
-    // Tier 3 — light fetch, parallel
-    const tier3Results = await Promise.all(
-      tiers.tier3.map(niche => fetchNicheByTier(niche, 3))
-    )
-    for (const data of tier3Results.filter(Boolean)) {
-      results.push(data)
-      await saveMasterScan(data.niche, data)
     }
 
     // Step 3 — Build daily summary
@@ -219,12 +391,15 @@ export const handler = async (event) => {
       topTags,
       tiers,
       elapsedMs:     Date.now() - startTime,
-      youtube_units_used: tiers.tier1.length * 8 * 20 +
-                          tiers.tier2.length * 4 * 20 +
-                          tiers.tier3.length * 2 * 20,
+      youtube_units_used: tiers.tier1.length * 8 * 20,
     }
 
     await saveDailySummary(summary.date, summary)
+
+    // Build Improv cache from collected niche data
+    const improvData = buildImprovCache(results, tiers)
+    await saveImprovData(improvData)
+    console.log('Improv cache saved to MongoDB')
 
     console.log('=== Master Fetch Complete ===', `${summary.elapsedMs}ms`)
 

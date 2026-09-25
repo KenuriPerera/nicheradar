@@ -5,16 +5,18 @@ import { SkeletonCard } from '../components/Skeleton'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import clsx from 'clsx'
 import { useNiches } from '../hooks/useNiches'
+import { usePageCache } from '../hooks/usePageCache'
 
 export default function History() {
   const { niches } = useNiches()
   const [niche, setNiche] = useState('skincare')
   const [days, setDays] = useState(14)
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { data, set: setData } = usePageCache('history-' + niche + days)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  async function loadHistory() {
+  async function loadHistory(force = false) {
+    if (data && !force) return
     setLoading(true)
     setError(null)
     try {
@@ -83,7 +85,7 @@ export default function History() {
           </div>
         </div>
 
-        <button onClick={loadHistory} disabled={loading} className="btn-primary">
+        <button onClick={() => loadHistory(true)} disabled={loading} className="btn-primary">
           <RefreshCw className={clsx("w-4 h-4", loading && "animate-spin")} />
           {loading ? 'Refreshing…' : 'Refresh'}
         </button>

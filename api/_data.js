@@ -295,6 +295,13 @@ export const NICHE_MAP = {
     ytQueries:  ['personal finance viral trending', 'money tips viral', 'investing trending now'],
     seeds:      ['finance','money','investing','savings','budget','wealth','income','sidehustle','passive','crypto','stocks','debt','freedom','retire','frugal'],
   },
+  stationery: {
+    label:      'Stationery',
+    icon:       '✏️',
+    subreddits: ['notebooks', 'PenmanshipPorn', 'stationery', 'bulletjournal', 'fountainpens'],
+    ytQueries:  ['stationery haul trending', 'bullet journal setup', 'aesthetic stationery collection'],
+    seeds:      ['journaling','planner','bujo','washi','stickers','notebooks','pens','stationery'],
+  },
 }
 
 // Auto-derived — never edit these manually

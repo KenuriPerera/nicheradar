@@ -6,17 +6,19 @@ import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
 import { useNiches } from '../hooks/useNiches'
+import { usePageCache } from '../hooks/usePageCache'
 
 export default function Dashboard() {
   const { niches } = useNiches()
-  const [data, setData] = useState(null)
+  const { data, set: setData } = usePageCache('dashboard')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [lastRun, setLastRun] = useState(null)
   const [masterLoading, setMasterLoading] = useState(false)
-  const [lastMaster,    setLastMaster]    = useState(null)
+  const [lastMaster, setLastMaster] = useState(null)
 
-  async function load() {
+  async function load(force = false) {
+    if (data && !force) return
     setLoading(true)
     setError(null)
     try {
@@ -35,7 +37,7 @@ export default function Dashboard() {
     try {
       const res = await runMasterFetch()
       setLastMaster(res.summary)
-      await load()
+      await load(true)
     } catch (e) {
       console.error(e)
     } finally {
@@ -65,7 +67,7 @@ export default function Dashboard() {
             <Database className={`w-4 h-4 ${masterLoading ? 'animate-spin' : ''}`} />
             {masterLoading ? 'Scanning all niches...' : 'Master Scan'}
           </button>
-          <button onClick={load} disabled={loading} className="btn-ghost">
+          <button onClick={() => load(true)} disabled={loading} className="btn-ghost">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>

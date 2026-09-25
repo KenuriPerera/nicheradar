@@ -17,47 +17,71 @@ function dbHeaders() {
 }
 
 const QUOTAS = {
-  youtube:    { label: 'YouTube API',      total: 10000, unit: 'units',    resetHours: 24, color: '#ef4444' },
-  newsapi:    { label: 'NewsAPI',          total: 100,   unit: 'requests', resetHours: 24, color: '#f59e0b' },
-  gemini:     { label: 'Gemini AI',        total: 15,    unit: 'requests', resetHours: 24, color: '#06b6d4' },
-  hackernews: { label: 'Hacker News',      total: 99999, unit: 'requests', resetHours: 24, color: '#10b981' },
-  supabase:   { label: 'Supabase',         total: 500,   unit: 'MB',       resetHours: 720,color: '#7c3aed' },
-  frankfurter:{ label: 'Exchange Rates',   total: 99999, unit: 'requests', resetHours: 24, color: '#10b981' },
+  youtube:     { label: 'YouTube API',    total: 10000, unit: 'units',    resetHours: 24,  color: '#ef4444' },
+  newsapi:     { label: 'NewsAPI',        total: 100,   unit: 'requests', resetHours: 24,  color: '#f59e0b' },
+  gemini:      { label: 'Gemini AI',      total: 15,    unit: 'requests', resetHours: 24,  color: '#06b6d4' },
+  hackernews:  { label: 'Hacker News',    total: 99999, unit: 'requests', resetHours: 24,  color: '#10b981' },
+  supabase:    { label: 'Supabase',       total: 500,   unit: 'MB',       resetHours: 720, color: '#7c3aed' },
+  frankfurter: { label: 'Exchange Rates', total: 99999, unit: 'requests', resetHours: 24,  color: '#10b981' },
+  serpapi:     { label: 'SerpAPI',        total: 200,   unit: 'searches', resetHours: 720, color: '#a78bfa' },
 }
 
 async function getOrCreateToday() {
-  if (!BASE() || !KEY()) return null
+  const url  = process.env.SUPABASE_URL
+  const key  = process.env.SUPABASE_PUBLISHABLE_KEY
+  if (!url || !key) {
+    console.log('Quota: Supabase env vars missing')
+    return null
+  }
+
   const today = new Date().toISOString().split('T')[0]
+  const h = {
+    'apikey':        key,
+    'Authorization': `Bearer ${key}`,
+    'Content-Type':  'application/json',
+    'Prefer':        'return=representation',
+  }
 
   try {
-    // Try to get today's record
+    // Try to get today's row
     const getRes = await fetch(
-      `${BASE()}/rest/v1/api_usage?date=eq.${today}&select=*&limit=1`,
-      { headers: dbHeaders() }
+      `${url}/rest/v1/api_usage?date=eq.${today}&select=*&limit=1`,
+      { headers: h }
     )
+    console.log('Quota GET status:', getRes.status)
+    if (!getRes.ok) {
+      const err = await getRes.text()
+      console.log('Quota GET error:', err)
+      return null
+    }
     const existing = await getRes.json()
     if (existing?.length > 0) return existing[0]
 
-    // Create today's record
-    const createRes = await fetch(
-      `${BASE()}/rest/v1/api_usage`,
-      {
-        method:  'POST',
-        headers: { ...dbHeaders(), 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          date:        today,
-          youtube:     0,
-          newsapi:     0,
-          gemini:      0,
-          hackernews:  0,
-          supabase_mb: 0,
-          frankfurter: 0,
-        }),
-      }
-    )
+    // Create today's row
+    const createRes = await fetch(`${url}/rest/v1/api_usage`, {
+      method:  'POST',
+      headers: h,
+      body: JSON.stringify({
+        date:        today,
+        youtube:     0,
+        newsapi:     0,
+        gemini:      0,
+        hackernews:  0,
+        supabase_mb: 0,
+        frankfurter: 0,
+        serpapi:     0,
+      }),
+    })
+    console.log('Quota CREATE status:', createRes.status)
+    if (!createRes.ok) {
+      const err = await createRes.text()
+      console.log('Quota CREATE error:', err)
+      return null
+    }
     const created = await createRes.json()
     return Array.isArray(created) ? created[0] : created
-  } catch {
+  } catch (e) {
+    console.log('Quota exception:', e.message)
     return null
   }
 }

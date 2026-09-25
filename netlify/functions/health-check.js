@@ -70,6 +70,22 @@ const TESTS = [
     check:   d => d?.fetchedAt !== undefined,
     apiCost: 'zero — MongoDB read',
   },
+  {
+    name:    'SerpAPI Quota',
+    fn:      'serp-insights',
+    method:  'GET',
+    params:  '?type=quota',
+    check:   d => d?.quota !== undefined,
+    apiCost: 'zero — quota check uses no searches',
+  },
+  {
+    name:    'Improv Cache',
+    fn:      'improv',
+    method:  'GET',
+    params:  '?feature=hooks',
+    check:   d => d !== null,
+    apiCost: 'zero — MongoDB read',
+  },
 ]
 
 async function runTest(test) {

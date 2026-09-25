@@ -1,4 +1,5 @@
 import { fetchReddit, fetchYouTube, NICHE_MAP } from './_data.js'
+import { getCachedScan } from './_mongodb.js'
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +52,56 @@ export const handler = async (event) => {
   const { niche = 'skincare' } = JSON.parse(event.body ?? '{}')
   const cfg = NICHE_MAP[niche]
   if (!cfg) return { statusCode: 400, headers, body: JSON.stringify({ error: `Unknown niche: ${niche}` }) }
+
+  // Check MongoDB cache first
+  const cached = await getCachedScan(niche)
+  if (cached) {
+    console.log(`Trending Posts: using cached data for ${niche}`)
+    const topReddit = (cached.news ?? []).slice(0, 12).map(a => ({
+      title:       a.title,
+      subreddit:   a.source ?? 'News',
+      score:       0,
+      comments:    0,
+      upvoteRatio: 100,
+      engScore:    50,
+      url:         a.url,
+      feed:        'news',
+      ageHours:    a.publishedAt
+        ? Math.round((Date.now() - new Date(a.publishedAt).getTime()) / 36e5)
+        : 24,
+      flair:       a.source ?? null,
+    }))
+
+    const topYouTube = (cached.youtube ?? []).slice(0, 8).map(v => ({
+      title:     v.title,
+      channel:   v.channel,
+      published: v.published,
+      videoId:   v.videoId,
+      url:       `https://www.youtube.com/watch?v=${v.videoId}`,
+      thumbnail: `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`,
+      ageLabel:  'recent',
+    }))
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        niche,
+        fetchedAt:    cached.fetchedAt,
+        fromCache:    true,
+        totalSources: topReddit.length + topYouTube.length,
+        summary: {
+          topPostTitle:  topReddit[0]?.title?.slice(0, 60) ?? '—',
+          topPostScore:  topReddit[0]?.engScore ?? 0,
+          topVideoTitle: topYouTube[0]?.title?.slice(0, 60) ?? '—',
+          audioCount:    0,
+        },
+        topRedditPosts:   topReddit,
+        topYouTubeVideos: topYouTube,
+        trendingAudio:    [],
+      }),
+    }
+  }
 
   // Add abort timeout for Reddit
   const redditPromise = Promise.race([

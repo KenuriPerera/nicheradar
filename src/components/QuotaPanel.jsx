@@ -9,7 +9,7 @@ const STATUS_STYLE = {
   critical: { label: 'Critical', text: 'text-red-400',      bg: 'bg-red-400'      },
 }
 
-export default function QuotaPanel() {
+export default function QuotaPanel({ compact = false }) {
   const [data,      setData]      = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [lastFetch, setLastFetch] = useState(null)
@@ -30,13 +30,36 @@ export default function QuotaPanel() {
   useEffect(() => { load() }, [])
 
   if (loading && !data) return (
-    <div className="card animate-pulse space-y-3">
-      <div className="h-4 w-32 bg-radar-border rounded" />
-      {[1,2,3,4].map(i => <div key={i} className="h-8 bg-radar-border rounded" />)}
+    <div className={compact ? "space-y-1.5 animate-pulse" : "card animate-pulse space-y-3"}>
+      <div className="h-3 w-20 bg-radar-border rounded" />
+      {[1,2,3].map(i => <div key={i} className="h-4 bg-radar-border rounded" />)}
     </div>
   )
 
   if (!data) return null
+
+  if (compact) return (
+    <div className="space-y-1.5">
+      <p className="text-xs text-radar-muted">API Quotas</p>
+      {data?.status?.filter(q => !q.unlimited).map(q => (
+        <div key={q.key} className="space-y-0.5">
+          <div className="flex justify-between text-xs">
+            <span className="text-radar-muted">{q.label}</span>
+            <span className={q.status === 'critical' ? 'text-red-400' : q.status === 'warning' ? 'text-radar-amber' : 'text-radar-green'}>
+              {q.left.toLocaleString()} left
+            </span>
+          </div>
+          <div className="h-1 bg-radar-border rounded-full overflow-hidden">
+            <div className="h-full rounded-full"
+              style={{
+                width: `${q.pct}%`,
+                background: q.pct >= 90 ? '#ef4444' : q.pct >= 70 ? '#f59e0b' : q.color,
+              }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <div className="card space-y-4">

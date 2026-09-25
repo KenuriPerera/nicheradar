@@ -14,6 +14,7 @@ import ScoreRing from '../components/ScoreRing'
 import PlatformBadge from '../components/PlatformBadge'
 import { SkeletonCard } from '../components/Skeleton'
 import { useNiches } from '../hooks/useNiches'
+import { usePageCache } from '../hooks/usePageCache'
 
 const PLATFORMS = [
   { key: 'both', label: 'All Platforms' },
@@ -29,14 +30,14 @@ export default function Analyze() {
   const [niche, setNiche] = useState(params.get('niche') || 'skincare')
   const [platform, setPlatform] = useState('both')
   const [noFace, setNoFace] = useState(false)
-  const [data, setData] = useState(null)
+  const { data, set: setData } = usePageCache('analyze-' + niche + platform)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  async function run() {
+  async function run(force = false) {
+    if (data && !force) return
     setLoading(true)
     setError(null)
-    setData(null)
     try {
       const res = await analyzeTrend(niche, platform, noFace)
       setData(res)
@@ -48,7 +49,7 @@ export default function Analyze() {
     }
   }
 
-  useEffect(() => { run() }, [])
+  useEffect(() => { run() }, [niche, platform])
 
   const radarData = data ? [
     { subject: 'Virality', A: data.scores?.virality ?? 0 },
@@ -115,7 +116,7 @@ export default function Analyze() {
           </button>
         </div>
 
-        <button onClick={run} disabled={loading} className="btn-primary">
+        <button onClick={() => run(true)} disabled={loading} className="btn-primary">
           <Search className="w-4 h-4" />
           {loading ? 'Analyzing…' : 'Analyze'}
         </button>

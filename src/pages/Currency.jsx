@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw, ArrowLeftRight, TrendingUp } from 'lucide-react'
 import { getCurrency, incrementQuota } from '../utils/api'
+import { usePageCache } from '../hooks/usePageCache'
 
 const CURRENCIES = ['LKR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD']
 
@@ -16,27 +17,28 @@ const CURRENCY_INFO = {
 export default function Currency() {
   const [base,    setBase]    = useState('USD')
   const [amount,  setAmount]  = useState('100')
-  const [rates,   setRates]   = useState(null)
-  const [date,    setDate]    = useState(null)
+  const { data, set: setData } = usePageCache('currency-' + base)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
 
-  async function load(b = base) {
+  const rates = data?.rates ?? null
+  const date  = data?.date  ?? null
+
+  async function load(b = base, force = false) {
+    if (data && !force && b === base) return
     setLoading(true); setError(null)
     try {
       const res = await getCurrency(b)
-      setRates(res.rates)
-      setDate(res.date)
+      setData(res)
       incrementQuota('frankfurter', 1).catch(() => {})
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(base) }, [base])
 
   function handleBase(b) {
     setBase(b)
-    load(b)
   }
 
   const num = parseFloat(amount) || 0
@@ -99,7 +101,7 @@ export default function Currency() {
         </div>
 
         <button
-          onClick={() => load()}
+          onClick={() => load(base, true)}
           disabled={loading}
           className="btn-ghost w-full justify-center"
         >

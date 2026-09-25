@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Brain, TrendingUp, Zap, Target, RefreshCw, AlertCircle } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -7,6 +7,7 @@ import {
 import { getIntelligence } from '../utils/api'
 import { SkeletonCard } from '../components/Skeleton'
 import clsx from 'clsx'
+import { usePageCache } from '../hooks/usePageCache'
 
 const TREND_STYLE = {
   rising:  { label: '↑ Rising',  bg: 'bg-radar-green/10',  text: 'text-radar-green',  border: 'border-radar-green/30'  },
@@ -23,17 +24,20 @@ const CROSS_STYLE = {
 const OPP_COLORS = ['#7c3aed', '#10b981', '#06b6d4', '#f59e0b', '#ff2d55']
 
 export default function Intelligence() {
-  const [data,    setData]    = useState(null)
+  const { data, set: setData } = usePageCache('intelligence')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
   const [tab,     setTab]     = useState('momentum')
 
-  async function run() {
-    setLoading(true); setError(null); setData(null)
+  async function run(force = false) {
+    if (data && !force) return
+    setLoading(true); setError(null)
     try { setData(await getIntelligence()) }
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
+
+  useEffect(() => { run() }, [])
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
@@ -48,7 +52,7 @@ export default function Intelligence() {
             Cross-niche analysis — momentum, signals and opportunities across all {15} niches
           </p>
         </div>
-        <button onClick={run} disabled={loading} className="btn-primary">
+        <button onClick={() => run(true)} disabled={loading} className="btn-primary">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Analysing...' : 'Run Analysis'}
         </button>
@@ -83,7 +87,7 @@ export default function Intelligence() {
             Scans all 15 niches simultaneously to find momentum leaders,
             cross-niche viral signals, and your best posting opportunities right now.
           </p>
-          <button onClick={run} className="btn-primary mx-auto">
+          <button onClick={() => run(true)} className="btn-primary mx-auto">
             <Brain className="w-4 h-4" />
             Run Analysis
           </button>
@@ -137,19 +141,24 @@ export default function Intelligence() {
             <div className="space-y-4 animate-fade-in">
               <div className="card">
                 <p className="text-xs text-radar-muted mb-4 uppercase tracking-wider">
-                  Niches ranked by rising signals × viral score
+                  Momentum score — rising signals × viral score
                 </p>
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart
                     data={data.momentumRanking.slice(0, 10)}
-                    margin={{ top: 0, right: 8, left: -20, bottom: 40 }}
+                    margin={{ top: 8, right: 8, left: -20, bottom: 8 }}
+                    barCategoryGap="20%"
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3d" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" vertical={false} />
                     <XAxis
-                      dataKey="icon"
-                      tick={{ fill: '#e2e8f0', fontSize: 16 }}
+                      dataKey="label"
+                      tick={{ fill: '#94a3b8', fontSize: 11 }}
                       axisLine={false}
                       tickLine={false}
+                      interval={0}
+                      angle={-30}
+                      textAnchor="end"
+                      height={50}
                     />
                     <YAxis
                       tick={{ fill: '#64748b', fontSize: 11 }}
@@ -158,20 +167,56 @@ export default function Intelligence() {
                       domain={[0, 100]}
                     />
                     <Tooltip
-                      contentStyle={{ background: '#1a1a26', border: '1px solid #2a2a3d', borderRadius: 8, fontSize: 12 }}
-                      formatter={(v, _, props) => [v, props.payload.label]}
-                      labelFormatter={() => ''}
+                      contentStyle={{
+                        background: '#13131f',
+                        border: '1px solid #2a2a3d',
+                        borderRadius: 12,
+                        fontSize: 12,
+                        padding: '10px 14px',
+                      }}
+                      formatter={(v, _, props) => [
+                        <span style={{ color: '#fff', fontWeight: 600 }}>{v}</span>,
+                        <span style={{ color: '#64748b' }}>momentum</span>
+                      ]}
+                      labelFormatter={(label) => (
+                        <span style={{ color: '#a78bfa', fontWeight: 600 }}>{label}</span>
+                      )}
+                      cursor={{ fill: 'rgba(124,58,237,0.08)' }}
                     />
-                    <Bar dataKey="momentum" radius={[6,6,0,0]}>
+                    <Bar dataKey="momentum" radius={[8, 8, 0, 0]} maxBarSize={48}>
                       {data.momentumRanking.slice(0, 10).map((entry, i) => (
                         <Cell
                           key={entry.niche}
-                          fill={entry.trend === 'rising' ? '#10b981' : entry.trend === 'stable' ? '#f59e0b' : '#64748b'}
+                          fill={
+                            entry.trend === 'rising'
+                              ? i === 0
+                                ? '#10b981'   // #1 = bright green
+                                : i <= 2
+                                ? '#34d399'   // top 3 = lighter green
+                                : '#6ee7b7'   // rest = faint green
+                              : entry.trend === 'stable'
+                              ? '#f59e0b'     // stable = amber
+                              : '#475569'     // cooling = slate
+                          }
                         />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+
+                {/* Legend */}
+                <div className="flex items-center gap-6 mt-2 justify-center">
+                  {[
+                    { color: '#10b981', label: 'Rising'  },
+                    { color: '#f59e0b', label: 'Stable'  },
+                    { color: '#475569', label: 'Cooling' },
+                  ].map(l => (
+                    <div key={l.label} className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ background: l.color }} />
+                      <span className="text-xs text-radar-muted">{l.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Ranking table */}

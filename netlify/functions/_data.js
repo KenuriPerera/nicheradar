@@ -11,19 +11,18 @@ export function cors(res) {
 
 // ── Reddit ────────────────────────────────────────────────────────────────────
 export async function fetchReddit(subreddits, limit = 15) {
-  const results = []
-  for (const sub of subreddits) {
+  const fetchSub = async (sub) => {
     try {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 5000) // 5s timeout per request
+      const timer = setTimeout(() => controller.abort(), 2000)
 
       const [hot, rising] = await Promise.all([
         fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=${limit}`,
-          { headers: { 'User-Agent': 'NicheRadar/1.0' }, signal: controller.signal })
+          { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, signal: controller.signal })
           .then(r => r.ok ? r.json() : null)
           .catch(() => null),
         fetch(`https://www.reddit.com/r/${sub}/rising.json?limit=5`,
-          { headers: { 'User-Agent': 'NicheRadar/1.0' }, signal: controller.signal })
+          { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, signal: controller.signal })
           .then(r => r.ok ? r.json() : null)
           .catch(() => null),
       ])
@@ -32,11 +31,13 @@ export async function fetchReddit(subreddits, limit = 15) {
 
       const hotPosts = hot?.data?.children?.map(c => ({ ...c.data, feed: 'hot' })) ?? []
       const risingPosts = rising?.data?.children?.map(c => ({ ...c.data, feed: 'rising' })) ?? []
-      results.push({ subreddit: sub, posts: [...hotPosts, ...risingPosts] })
+      return { subreddit: sub, posts: [...hotPosts, ...risingPosts] }
     } catch {
-      results.push({ subreddit: sub, posts: [] })
+      return { subreddit: sub, posts: [] }
     }
   }
+
+  const results = await Promise.all(subreddits.map(fetchSub))
 
   // If Reddit returned no posts — fall back to NewsAPI + HN
   const totalPosts = results.reduce((s, r) => s + r.posts.length, 0)
@@ -125,8 +126,11 @@ export async function fetchYouTube(queries, maxResults = 10) {
   for (const query of queries) {
     if (key) {
       try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 3000)
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=${maxResults}&type=video&order=date&key=${key}`
-        const res = await fetch(url)
+        const res = await fetch(url, { signal: controller.signal })
+        clearTimeout(timer)
         if (res.ok) {
           const data = await res.json()
           for (const item of data.items ?? []) {
@@ -144,9 +148,12 @@ export async function fetchYouTube(queries, maxResults = 10) {
 
     // HTML fallback if no key or key failed
     try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 3000)
       const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
-      const res = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } })
+      const res = await fetch(searchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, signal: controller.signal })
       const html = await res.text()
+      clearTimeout(timer)
 
       const titleMatches = [...html.matchAll(/"title":{"runs":\[{"text":"(.*?)"}\]/g)].map(m => m[1])
       for (const title of titleMatches.slice(0, maxResults)) {
@@ -380,6 +387,13 @@ export const NICHE_MAP = {
     subreddits: ['personalfinance', 'investing', 'financialindependence', 'frugal', 'Entrepreneur'],
     ytQueries: ['personal finance viral trending', 'money tips viral', 'investing trending now'],
     seeds: ['finance', 'money', 'investing', 'savings', 'budget', 'wealth', 'income', 'sidehustle', 'passive', 'crypto', 'stocks', 'debt', 'freedom', 'retire', 'frugal'],
+  },
+  stationery: {
+    label:      'Stationery',
+    icon:       '✏️',
+    subreddits: ['notebooks', 'PenmanshipPorn', 'stationery', 'bulletjournal', 'fountainpens'],
+    ytQueries:  ['stationery haul trending', 'bullet journal setup', 'aesthetic stationery collection'],
+    seeds:      ['journaling','planner','bujo','washi','stickers','notebooks','pens','stationery'],
   },
 }
 

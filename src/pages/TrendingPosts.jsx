@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Flame, ExternalLink, Music, Youtube, MessageSquare, ChevronDown, AlertCircle, ThumbsUp } from 'lucide-react'
 import { getTrendingPosts, incrementQuota } from '../utils/api'
 import { useNiches } from '../hooks/useNiches'
 import { SkeletonCard } from '../components/Skeleton'
 import clsx from 'clsx'
+import { usePageCache } from '../hooks/usePageCache'
 
 const FEED_STYLE = {
   hot:    { label: '🔥 Hot',    bg: 'bg-radar-amber/10',  text: 'text-radar-amber',  border: 'border-radar-amber/30'  },
@@ -14,13 +15,14 @@ const FEED_STYLE = {
 export default function TrendingPosts() {
   const { niches }  = useNiches()
   const [niche,     setNiche]   = useState('skincare')
-  const [data,      setData]    = useState(null)
+  const { data, set: setData } = usePageCache('trending-' + niche)
   const [loading,   setLoading] = useState(false)
   const [error,     setError]   = useState(null)
   const [tab,       setTab]     = useState('reddit')
 
-  async function run() {
-    setLoading(true); setError(null); setData(null)
+  async function run(force = false) {
+    if (data && !force) return
+    setLoading(true); setError(null)
     try {
       const res = await getTrendingPosts(niche)
       setData(res)
@@ -30,6 +32,8 @@ export default function TrendingPosts() {
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
+
+  useEffect(() => { run() }, [niche])
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in">
@@ -57,7 +61,7 @@ export default function TrendingPosts() {
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />
           </div>
         </div>
-        <button onClick={run} disabled={loading} className="btn-primary">
+        <button onClick={() => run(true)} disabled={loading} className="btn-primary">
           <Flame className="w-4 h-4" />
           {loading ? 'Fetching...' : 'Get Trending'}
         </button>

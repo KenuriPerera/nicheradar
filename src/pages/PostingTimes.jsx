@@ -3,14 +3,16 @@ import { Clock, Calendar, CheckCircle2 } from 'lucide-react'
 import { getPostingTimes } from '../utils/api'
 import { SkeletonCard } from '../components/Skeleton'
 import clsx from 'clsx'
+import { usePageCache } from '../hooks/usePageCache'
 
 export default function PostingTimes() {
-  const [data,    setData]    = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { data, set: setData } = usePageCache('posting-times')
+  const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
   const [active,  setActive]  = useState('tiktok')
 
-  async function load() {
+  async function load(force = false) {
+    if (data && !force) return
     setLoading(true); setError(null)
     try {
       const res = await getPostingTimes()

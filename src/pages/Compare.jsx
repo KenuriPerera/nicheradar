@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronDown, BarChart2, AlertCircle } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -9,19 +9,20 @@ import { comparePlatforms } from '../utils/api'
 import ScoreRing from '../components/ScoreRing'
 import { SkeletonCard } from '../components/Skeleton'
 import { useNiches } from '../hooks/useNiches'
+import { usePageCache } from '../hooks/usePageCache'
 
 export default function Compare() {
   const { niches } = useNiches()
   const [niche, setNiche] = useState('skincare')
   const [noFace, setNoFace] = useState(false)
-  const [data, setData] = useState(null)
+  const { data, set: setData } = usePageCache('compare-' + niche)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  async function run() {
+  async function run(force = false) {
+    if (data && !force) return
     setLoading(true)
     setError(null)
-    setData(null)
     try {
       const res = await comparePlatforms(niche, noFace)
       setData(res)
@@ -31,6 +32,8 @@ export default function Compare() {
       setLoading(false)
     }
   }
+
+  useEffect(() => { run() }, [niche])
 
   const chartData = data ? [
     { metric: 'Reach', TikTok: data.tiktok?.reach ?? 0, Instagram: data.instagram?.reach ?? 0 },
@@ -79,7 +82,7 @@ export default function Compare() {
           </button>
         </div>
 
-        <button onClick={run} disabled={loading} className="btn-primary">
+        <button onClick={() => run(true)} disabled={loading} className="btn-primary">
           <BarChart2 className="w-4 h-4" />
           {loading ? 'Comparing…' : 'Compare'}
         </button>

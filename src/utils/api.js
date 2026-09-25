@@ -91,3 +91,89 @@ export const getDailySummaries = () =>
 
 export const runHealthCheck = () =>
   fetch('/api/health-check').then(handle)
+
+export const discoverNiches = () =>
+  fetch('/api/discover-niches').then(handle)
+
+export const getStationeryIntel = () =>
+  fetch('/api/stationery-intel').then(handle)
+
+export const getSerpInsights = (query, type = 'all') =>
+  fetch(`/api/serp-insights?query=${encodeURIComponent(query)}&type=${type}`)
+    .then(handle)
+
+export const getSerpQuota = () =>
+  fetch('/api/serp-insights?type=quota').then(handle)
+
+// Improv features — all from cache
+export const getImprovCache = () =>
+  fetch('/api/improv?feature=hooks').then(handle)
+
+export const getCalendar = (start, end) =>
+  fetch(`/api/improv?feature=calendar&start=${start}&end=${end}`).then(handle)
+
+export const saveCalendarEntry = (entry) =>
+  fetch('/api/improv?feature=calendar', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(entry),
+  }).then(handle)
+
+export const updateCalendarEntry = (id, updates) =>
+  fetch('/api/improv?feature=calendar', {
+    method:  'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ id, updates }),
+  }).then(handle)
+
+export const getGrowthData = () =>
+  fetch('/api/improv?feature=growth').then(handle)
+
+export const saveGrowthEntry = (entry) =>
+  fetch('/api/improv?feature=growth', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(entry),
+  }).then(handle)
+
+export const analyzeThumbnail = (imageData, cloudinaryUrl, niche) =>
+  fetch('/api/improv?feature=thumbnail', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ imageData, cloudinaryUrl, niche }),
+  }).then(handle)
+
+export const analyzeInspoChannel = (channelId) =>
+  fetch('/api/improv?feature=inspo-channel', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ channelId }),
+  }).then(handle)
+
+export const generateReviewTemplate = (product, category) =>
+  fetch('/api/improv?feature=review-template', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ product, category }),
+  }).then(handle)
+
+// Cloudinary direct upload (client-side)
+export async function uploadToCloudinary(file, type = 'thumbnail') {
+  const cloudName   = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+  if (!cloudName || !uploadPreset) {
+    throw new Error('VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET not configured')
+  }
+  const formData    = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', uploadPreset)
+  formData.append('folder', `nicheradar/${type}`)
+  const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body:   formData,
+  })
+  if (!res.ok) throw new Error('Cloudinary upload failed')
+  const data = await res.json()
+  return { url: data.secure_url, publicId: data.public_id }
+}
+

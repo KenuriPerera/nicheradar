@@ -4,7 +4,7 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-const GEMINI_MODEL = 'gemini-2.0-flash' // free tier model
+const GEMINI_MODEL = 'gemini-3.6-flash' // free tier model
 
 // Upload file to Gemini Files API then analyze
 async function analyzeVideoFile(base64Data, mimeType) {

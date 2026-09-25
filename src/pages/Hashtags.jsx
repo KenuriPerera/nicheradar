@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Hash, TrendingUp, Zap, Search, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react'
 import { getHashtags, incrementQuota } from '../utils/api'
 import { SkeletonCard } from '../components/Skeleton'
 import clsx from 'clsx'
 import { useNiches } from '../hooks/useNiches'
+import { usePageCache } from '../hooks/usePageCache'
 
 const TREND_CONFIG = {
   emerging: { label: 'Emerging',  bg: 'bg-radar-green/10',  text: 'text-radar-green',  border: 'border-radar-green/30',  bar: '#10b981', tip: 'New trend — low competition, post NOW' },
@@ -15,13 +16,14 @@ const TREND_CONFIG = {
 export default function Hashtags() {
   const { niches }  = useNiches()
   const [niche,   setNiche]   = useState('skincare')
-  const [data,    setData]    = useState(null)
+  const { data, set: setData } = usePageCache('hashtags-' + niche)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState(null)
   const [filter,  setFilter]  = useState('all')
 
-  async function run() {
-    setLoading(true); setError(null); setData(null)
+  async function run(force = false) {
+    if (data && !force) return
+    setLoading(true); setError(null)
     try {
       const res = await getHashtags(niche)
       setData(res)
@@ -30,6 +32,8 @@ export default function Hashtags() {
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
+
+  useEffect(() => { run() }, [niche])
 
   const shown = data?.hashtags?.filter(h => filter === 'all' || h.trend === filter) ?? []
 
@@ -59,7 +63,7 @@ export default function Hashtags() {
             <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-radar-muted pointer-events-none" />
           </div>
         </div>
-        <button onClick={run} disabled={loading} className="btn-primary">
+        <button onClick={() => run(true)} disabled={loading} className="btn-primary">
           <Search className="w-4 h-4" />
           {loading ? 'Scanning…' : 'Scan Trends'}
         </button>

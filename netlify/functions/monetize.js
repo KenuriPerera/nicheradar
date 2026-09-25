@@ -1,4 +1,5 @@
-import { NICHE_MAP, NICHE_KEYS } from './_data.js'
+import { fetchYouTube, fetchNewsAPI, NICHE_MAP } from './_data.js'
+import { getCachedScan } from './_mongodb.js'
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -6,164 +7,230 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-// Platform mechanics — based on how each platform works, not yearly trends
-const PLATFORM_DATA = {
-  kofi: {
-    name:        'Ko-fi',
-    icon:        '☕',
-    model:       'Tips, memberships, shop, commissions',
-    bestFor:     ['art', 'wellness', 'books', 'quotes', 'gaming', 'finance'],
-    strengths:   'Low barrier — supporters tip with no subscription required. Best for creators with loyal audience who want to show appreciation.',
-    contentTips: [
-      'Post free value consistently — Ko-fi supporters tip creators they follow regularly',
-      'Offer exclusive behind-the-scenes content for members',
-      'Sell digital downloads — templates, presets, guides, wallpapers',
-      'Use the shop for one-time digital product sales',
-      'Commissions work well for art, writing, and design niches',
-    ],
-    topProducts: ['Digital downloads', 'Tip jar', 'Monthly membership', 'Commissions', 'Exclusive posts'],
-    linkStrategy: 'Add Ko-fi link to every post caption and bio. Mention it at natural end of content.',
+// Platforms — Fiverr + social platforms replace Ko-fi/Gumroad/Payhip
+const PLATFORMS = [
+  {
+    key:         'fiverr',
+    name:        'Fiverr',
+    icon:        '💼',
+    type:        'freelance marketplace',
+    bestFor:     'Selling content creation services, reviews, voice-overs, video editing',
+    fee:         '20% Fiverr commission on each order',
+    audience:    'Global buyers actively searching for content creators',
+    digitalOk:   true,
+    physicalOk:  false,
+    difficulty:  'medium',
+    link:        'https://www.fiverr.com',
   },
-  gumroad: {
-    name:        'Gumroad',
-    icon:        '🛒',
-    model:       'Digital products, pay-what-you-want, subscriptions',
-    bestFor:     ['finance', 'tech', 'art', 'fitness', 'reviews', 'gaming'],
-    strengths:   'Best platform for selling digital products at scale. Built-in discovery and affiliate system.',
-    contentTips: [
-      'Create PDF guides, templates, or checklists related to your niche',
-      'Use pay-what-you-want pricing to lower the entry barrier',
-      'Bundle multiple products for higher average order value',
-      'Gumroad has its own discovery feed — optimise your product titles with keywords',
-      'Offer a free product first to build your buyer list',
-    ],
-    topProducts: ['PDF guides', 'Templates', 'Video courses', 'Presets', 'eBooks'],
-    linkStrategy: 'Create a lead magnet — free product that collects email. Upsell from there.',
+  {
+    key:         'tiktok-shop',
+    name:        'TikTok Shop',
+    icon:        '🎵',
+    type:        'social commerce',
+    bestFor:     'Product affiliate links embedded in TikTok videos and live streams',
+    fee:         '1-8% commission depending on category',
+    audience:    '1B+ TikTok users — highest reach for viral product sales',
+    digitalOk:   true,
+    physicalOk:  true,
+    difficulty:  'easy',
+    link:        'https://shop.tiktok.com',
   },
-  payhip: {
-    name:        'Payhip',
-    icon:        '💳',
-    model:       'Digital products, courses, memberships, physical goods',
-    bestFor:     ['skincare', 'fashion', 'food', 'travel', 'wellness', 'books'],
-    strengths:   'No monthly fee — only takes percentage of sales. Great for lifestyle and physical product niches.',
-    contentTips: [
-      'Sell digital lookbooks, recipe collections, or travel guides',
-      'Course builder works well for tutorial-heavy niches',
-      'EU VAT is handled automatically — good for international creators',
-      'Affiliate program built in — let followers earn by sharing your products',
-      'Use the coaching feature for 1-on-1 sessions',
-    ],
-    topProducts: ['Digital guides', 'Online courses', 'Membership plans', 'Coaching sessions', 'Printables'],
-    linkStrategy: 'Payhip checkout can be embedded on any site. Link directly from bio and content.',
+  {
+    key:         'instagram-collab',
+    name:        'Instagram Collabs',
+    icon:        '📸',
+    type:        'social brand deals',
+    bestFor:     'Sponsored posts, product tags, Instagram Shopping affiliate',
+    fee:         'No platform fee — negotiate directly with brands',
+    audience:    '2B+ Instagram users — highest CPM for visual niches',
+    digitalOk:   true,
+    physicalOk:  true,
+    difficulty:  'medium',
+    link:        'https://instagram.com',
   },
+  {
+    key:         'youtube-partner',
+    name:        'YouTube Partner',
+    icon:        '▶️',
+    type:        'ad revenue + memberships',
+    bestFor:     'Ad revenue, channel memberships, Super Thanks, merchandise shelf',
+    fee:         'YouTube keeps 45% of ad revenue',
+    audience:    '2.5B+ monthly users — best for long-form and tutorial content',
+    digitalOk:   true,
+    physicalOk:  false,
+    difficulty:  'hard',
+    link:        'https://youtube.com/creators',
+  },
+  {
+    key:         'pinterest-creator',
+    name:        'Pinterest Creator',
+    icon:        '📌',
+    type:        'affiliate + idea pins',
+    bestFor:     'Idea pins with affiliate links, product pins, Pinterest Creator Fund',
+    fee:         'Varies by affiliate program — typically 3-15%',
+    audience:    '480M+ monthly users — highest purchase intent of any platform',
+    digitalOk:   true,
+    physicalOk:  true,
+    difficulty:  'easy',
+    link:        'https://creators.pinterest.com',
+  },
+]
+
+// Derive platform strategy from live niche data
+function buildPlatformStrategy(niche, cfg, nicheData, liveSignals) {
+  const viralScore   = nicheData?.viralScore  ?? 0
+  const emerging     = nicheData?.emerging    ?? []
+  const topTag       = nicheData?.topTag      ?? niche
+  const topTitles    = liveSignals.slice(0, 5).map(s => s.title)
+
+  return PLATFORMS.map(p => {
+    // Score each platform for this niche
+    const platformScore = scorePlatformForNiche(niche, p.key, viralScore)
+
+    // Derive products from live signals
+    const derivedProducts = deriveProducts(niche, p.key, topTitles, cfg)
+
+    // Derive content strategy from signals
+    const strategy = deriveStrategy(niche, p.key, topTitles, emerging, topTag)
+
+    return {
+      ...p,
+      platformScore,
+      products:    derivedProducts,
+      strategy,
+      topTag,
+      viralScore,
+      bestTip:     deriveBestTip(niche, p.key, topTitles),
+    }
+  }).sort((a, b) => b.platformScore - a.platformScore)
 }
 
-// Generate niche-specific product ideas per platform
-function getNicheProducts(niche, platform) {
-  const NICHE_PRODUCTS = {
-    skincare: {
-      kofi:     ['Skincare routine PDF guide', 'Product recommendation list', 'Ingredient glossary download'],
-      gumroad:  ['Skincare ingredient cheat sheet', 'Routine builder template', 'Product tracker spreadsheet'],
-      payhip:   ['Complete skincare course', 'Personalised routine consultation', 'Skincare printable planner'],
-    },
-    movies: {
-      kofi:     ['Monthly watchlist PDF', 'Film analysis exclusive posts', 'Movie recommendation commission'],
-      gumroad:  ['Genre guide eBook', 'Film criticism template', 'Director filmography spreadsheet'],
-      payhip:   ['Film study course', 'Movie club membership', 'Cinema history guide'],
-    },
-    quotes: {
-      kofi:     ['Quote wallpaper pack', 'Daily quote membership', 'Custom quote commission'],
-      gumroad:  ['Quote design template pack', 'Affirmation card printable', 'Motivational journal PDF'],
-      payhip:   ['Mindset course', 'Printable quote poster set', 'Journaling membership'],
-    },
-    books: {
-      kofi:     ['Monthly reading list PDF', 'Book club membership', 'Annotation guide'],
-      gumroad:  ['Reading tracker spreadsheet', 'Genre recommendation guide', 'Book review template'],
-      payhip:   ['Speed reading course', 'Book club community', 'Reading challenge planner'],
-    },
-    reviews: {
-      kofi:     ['Honest review newsletter', 'Product testing membership', 'Recommendation commission'],
-      gumroad:  ['Product comparison template', 'Review framework guide', 'Category buying guide PDF'],
-      payhip:   ['Product research course', 'Review community membership', 'Affiliate link toolkit'],
-    },
-    fashion: {
-      kofi:     ['Style guide PDF', 'Outfit planning commission', 'Seasonal lookbook download'],
-      gumroad:  ['Capsule wardrobe template', 'Style formula guide', 'Shopping list spreadsheet'],
-      payhip:   ['Personal style course', 'Wardrobe audit guide', 'Sustainable fashion handbook'],
-    },
-    fitness: {
-      kofi:     ['Workout plan PDF', 'Form check commission', 'Monthly programming membership'],
-      gumroad:  ['Training programme download', 'Nutrition guide PDF', 'Progress tracker spreadsheet'],
-      payhip:   ['Fitness coaching course', '12-week programme', 'Nutrition planning membership'],
-    },
-    food: {
-      kofi:     ['Recipe collection PDF', 'Meal plan commission', 'Monthly recipe membership'],
-      gumroad:  ['Recipe eBook', 'Meal prep template', 'Ingredient substitution guide'],
-      payhip:   ['Cooking course', 'Cuisine deep-dive guide', 'Meal planning membership'],
-    },
-    travel: {
-      kofi:     ['Destination guide PDF', 'Itinerary commission', 'Travel tips membership'],
-      gumroad:  ['Packing list template', 'Budget tracker spreadsheet', 'City guide download'],
-      payhip:   ['Travel planning course', 'Solo travel safety guide', 'Digital nomad handbook'],
-    },
-    tech: {
-      kofi:     ['Setup guide PDF', 'Tool recommendation list', 'Tech review membership'],
-      gumroad:  ['Productivity system template', 'Tool comparison spreadsheet', 'Setup checklist PDF'],
-      payhip:   ['Productivity course', 'Tech buying guide', 'Software tutorial membership'],
-    },
-    wellness: {
-      kofi:     ['Self care routine PDF', 'Daily check-in membership', 'Wellness journal commission'],
-      gumroad:  ['Mental health toolkit PDF', 'Habit tracker printable', 'Meditation guide download'],
-      payhip:   ['Wellness programme course', 'Mindfulness membership', 'Therapy prep workbook'],
-    },
-    pets: {
-      kofi:     ['Pet care guide PDF', 'Training commission', 'Monthly pet tips membership'],
-      gumroad:  ['Training plan download', 'Pet health checklist', 'Breed guide PDF'],
-      payhip:   ['Pet training course', 'New pet owner guide', 'Vet visit prep workbook'],
-    },
-    gaming: {
-      kofi:     ['Game guide PDF', 'Build commission', 'Gaming membership community'],
-      gumroad:  ['Strategy guide download', 'Game tier list template', 'Setup guide PDF'],
-      payhip:   ['Gaming coaching course', 'Game design introduction', 'Esports training guide'],
-    },
-    art: {
-      kofi:     ['Art print download', 'Commission requests', 'Monthly exclusive art membership'],
-      gumroad:  ['Brush preset pack', 'Process video download', 'Reference photo pack'],
-      payhip:   ['Art course for beginners', 'Digital art masterclass', 'Commission pricing guide'],
-    },
-    finance: {
-      kofi:     ['Budget template PDF', 'Financial check-in membership', 'Money coaching commission'],
-      gumroad:  ['Budget spreadsheet template', 'Investment starter guide', 'Debt payoff planner'],
-      payhip:   ['Personal finance course', 'Financial freedom roadmap', 'Money mindset membership'],
-    },
+function scorePlatformForNiche(niche, platform, viralScore) {
+  const NICHE_PLATFORM_FIT = {
+    skincare:   { 'instagram-collab': 90, 'tiktok-shop': 85, 'fiverr': 70, 'youtube-partner': 75, 'pinterest-creator': 80 },
+    movies:     { 'youtube-partner': 90, 'tiktok-shop': 75, 'instagram-collab': 70, 'fiverr': 65, 'pinterest-creator': 50 },
+    books:      { 'tiktok-shop': 85, 'instagram-collab': 80, 'pinterest-creator': 85, 'youtube-partner': 75, 'fiverr': 60 },
+    stationery: { 'pinterest-creator': 95, 'instagram-collab': 85, 'tiktok-shop': 80, 'fiverr': 75, 'youtube-partner': 70 },
+    fashion:    { 'instagram-collab': 95, 'tiktok-shop': 90, 'pinterest-creator': 85, 'youtube-partner': 70, 'fiverr': 60 },
+    fitness:    { 'instagram-collab': 85, 'youtube-partner': 90, 'tiktok-shop': 80, 'fiverr': 75, 'pinterest-creator': 70 },
+    food:       { 'tiktok-shop': 85, 'instagram-collab': 80, 'youtube-partner': 85, 'pinterest-creator': 90, 'fiverr': 65 },
+    travel:     { 'instagram-collab': 90, 'youtube-partner': 85, 'pinterest-creator': 80, 'tiktok-shop': 75, 'fiverr': 70 },
+    tech:       { 'youtube-partner': 95, 'fiverr': 90, 'tiktok-shop': 75, 'instagram-collab': 70, 'pinterest-creator': 60 },
+    wellness:   { 'instagram-collab': 85, 'pinterest-creator': 85, 'tiktok-shop': 75, 'youtube-partner': 80, 'fiverr': 70 },
+    finance:    { 'youtube-partner': 90, 'fiverr': 85, 'instagram-collab': 70, 'tiktok-shop': 65, 'pinterest-creator': 60 },
+    art:        { 'instagram-collab': 90, 'fiverr': 95, 'pinterest-creator': 85, 'tiktok-shop': 75, 'youtube-partner': 75 },
+    gaming:     { 'youtube-partner': 95, 'tiktok-shop': 80, 'fiverr': 75, 'instagram-collab': 70, 'pinterest-creator': 50 },
+    pets:       { 'tiktok-shop': 85, 'instagram-collab': 85, 'youtube-partner': 75, 'pinterest-creator': 80, 'fiverr': 60 },
+    quotes:     { 'instagram-collab': 85, 'pinterest-creator': 90, 'tiktok-shop': 80, 'youtube-partner': 65, 'fiverr': 60 },
+    reviews:    { 'youtube-partner': 85, 'fiverr': 80, 'tiktok-shop': 80, 'instagram-collab': 75, 'pinterest-creator': 65 },
+  }
+  const base = NICHE_PLATFORM_FIT[niche]?.[platform] ?? 65
+  // Boost score by viral score
+  return Math.min(100, Math.round(base * (1 + (viralScore - 50) / 500)))
+}
+
+function deriveProducts(niche, platform, titles, cfg) {
+  // Extract product/service ideas from live titles
+  const ideas = []
+  const PRODUCT_PATTERNS = [
+    /(\w+\s?\w+)\s+(kit|set|bundle|pack|collection|guide|template|preset)/gi,
+    /(\w+)\s+(review|tutorial|haul|routine|unboxing)/gi,
+  ]
+  for (const title of titles) {
+    for (const pattern of PRODUCT_PATTERNS) {
+      const matches = title.matchAll(pattern)
+      for (const match of matches) {
+        if (match[1] && match[1].length > 3) ideas.push(match[0])
+      }
+    }
   }
 
-  return NICHE_PRODUCTS[niche]?.[platform] ?? ['Digital guide', 'Template pack', 'Membership community']
+  // Supplement with niche-specific defaults if live extraction is thin
+  const defaults = {
+    skincare:   { fiverr: 'UGC skincare video creation service', 'tiktok-shop': 'Skincare routine affiliate bundles', 'instagram-collab': 'Skincare brand ambassador deals', 'youtube-partner': 'Skincare ingredient deep-dive series', 'pinterest-creator': 'Skincare routine idea pins' },
+    movies:     { fiverr: 'Movie review video editing service', 'tiktok-shop': 'Movie merch affiliate', 'instagram-collab': 'Streaming platform sponsored posts', 'youtube-partner': 'Movie review channel monetization', 'pinterest-creator': 'Movie recommendation pins' },
+    stationery: { fiverr: 'Digital planner design service', 'tiktok-shop': 'Stationery haul affiliate links', 'instagram-collab': 'Stationery brand partnerships', 'youtube-partner': 'Journaling tutorial channel', 'pinterest-creator': 'Stationery setup idea pins' },
+    books:      { fiverr: 'BookTok video creation service', 'tiktok-shop': 'Book affiliate links', 'instagram-collab': 'Publisher sponsored reviews', 'youtube-partner': 'Bookshelf tour and review channel', 'pinterest-creator': 'Reading list and book aesthetic pins' },
+  }
+  return ideas.length > 0
+    ? [...new Set(ideas)].slice(0, 3)
+    : [defaults[niche]?.[platform] ?? `${niche} content service on ${platform}`]
+}
+
+function deriveStrategy(niche, platform, titles, emerging, topTag) {
+  const topEmergingTags = emerging.slice(0, 3).map(h => `#${h.tag ?? h}`).join(' ')
+  const strategies = {
+    'fiverr':            `Create a gig offering ${niche} content creation. Use title keywords from trending: "${titles[0]?.slice(0,40) ?? niche}". Price starter at $5-15, premium at $50+. Use ${topEmergingTags || '#' + niche} in gig description.`,
+    'tiktok-shop':       `Add affiliate links to trending ${niche} products in your TikTok bio and videos. Feature products seen in titles like "${titles[0]?.slice(0,40) ?? niche}". Use ${topEmergingTags || '#' + niche} for discovery.`,
+    'instagram-collab':  `Pitch ${niche} brands using your engagement rate. Reference trending angle: "${titles[0]?.slice(0,40) ?? niche}". Tag brands in your posts and use ${topEmergingTags || '#' + niche} for brand visibility.`,
+    'youtube-partner':   `Create a ${niche} channel around trending topics like "${titles[0]?.slice(0,50) ?? niche}". Enable monetization at 1,000 subs + 4,000 watch hours. Use ${topTag ? '#' + topTag : '#' + niche} in descriptions.`,
+    'pinterest-creator': `Create idea pins around "${titles[0]?.slice(0,40) ?? niche}". Apply to Pinterest Creator Fund. Add affiliate links to product pins. Use ${topEmergingTags || '#' + niche} in pin descriptions.`,
+  }
+  return strategies[platform] ?? `Build your ${niche} presence on this platform using trending content signals.`
+}
+
+function deriveBestTip(niche, platform, titles) {
+  const latestSignal = titles[0]?.slice(0, 60) ?? `trending ${niche} content`
+  const tips = {
+    'fiverr':            `Your most bookable gig right now: base it on "${latestSignal}" — buyers are searching for this type of content.`,
+    'tiktok-shop':       `Products linked to "${latestSignal}" are getting high click-through right now. Add these to your shop showcase.`,
+    'instagram-collab':  `Brands want creators covering "${latestSignal}" — pitch this angle in your media kit.`,
+    'youtube-partner':   `"${latestSignal}" style videos are getting longer watch time right now — prioritize this format.`,
+    'pinterest-creator': `Pins about "${latestSignal}" are getting saved heavily this week — create a board around this topic.`,
+  }
+  return tips[platform] ?? `Focus on "${latestSignal}" to maximise your reach right now.`
 }
 
 export const handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' }
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
 
   const niche = event.queryStringParameters?.niche ?? 'skincare'
+  const cfg   = NICHE_MAP[niche]
+  if (!cfg) return { statusCode: 400, headers, body: JSON.stringify({ error: `Unknown niche: ${niche}` }) }
 
-  const platforms = Object.entries(PLATFORM_DATA).map(([key, p]) => ({
-    key,
-    name:         p.name,
-    icon:         p.icon,
-    model:        p.model,
-    isRecommended: p.bestFor.includes(niche),
-    strengths:    p.strengths,
-    contentTips:  p.contentTips,
-    topProducts:  p.topProducts,
-    nicheProducts: getNicheProducts(niche, key),
-    linkStrategy: p.linkStrategy,
-  })).sort((a, b) => b.isRecommended - a.isRecommended)
+  // Get live rate
+  let lkrRate = 330
+  try {
+    const rateRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=LKR')
+    const rateData = await rateRes.json()
+    lkrRate = rateData.rates?.LKR ?? 330
+  } catch {}
+
+  // Try MongoDB cache first
+  let nicheData = await getCachedScan(niche).catch(() => null)
+
+  // Fetch live signals if no cache
+  let liveSignals = []
+  if (!nicheData) {
+    const [ytVideos, newsArticles] = await Promise.all([
+      fetchYouTube(cfg.ytQueries.slice(0, 1), 6).catch(() => []),
+      fetchNewsAPI(cfg.label, 6).catch(() => []),
+    ])
+    liveSignals = [
+      ...ytVideos.map(v  => ({ title: v.title, source: 'youtube' })),
+      ...newsArticles.map(a => ({ title: a.title, source: 'news' })),
+    ]
+  } else {
+    liveSignals = [
+      ...(nicheData.youtube ?? []).map(v  => ({ title: v.title, source: 'youtube' })),
+      ...(nicheData.news    ?? []).map(a  => ({ title: a.title, source: 'news'    })),
+    ]
+  }
+
+  const platforms = buildPlatformStrategy(niche, cfg, nicheData, liveSignals)
 
   return {
     statusCode: 200,
     headers,
-    body: JSON.stringify({ niche, platforms, fetchedAt: new Date().toISOString() }),
+    body: JSON.stringify({
+      niche,
+      label:      cfg.label,
+      icon:       cfg.icon,
+      lkrRate:    Math.round(lkrRate),
+      fromCache:  !!nicheData,
+      platforms,
+      signals:    liveSignals.slice(0, 5),
+      fetchedAt:  new Date().toISOString(),
+    }),
   }
 }
