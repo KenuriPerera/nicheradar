@@ -9,7 +9,7 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-const GEMINI_MODEL = 'gemini-3.6-flash'
+const GEMINI_MODEL = 'gemini-3.8-flash'
 
 // Analyze thumbnail via Cloudinary + Gemini
 async function analyzeThumbnail(imageUrl) {

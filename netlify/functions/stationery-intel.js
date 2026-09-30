@@ -6,7 +6,7 @@ const headers = {
   'Content-Type': 'application/json',
 }
 
-const GEMINI_MODEL = 'gemini-3.6-flash'
+const GEMINI_MODEL = 'gemini-3.8-flash'
 
 // LKR exchange rate — fetched live from frankfurter
 async function getLKRRate() {

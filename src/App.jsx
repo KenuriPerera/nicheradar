@@ -13,6 +13,7 @@ import StationeryMarket from './pages/StationeryMarket'
 import TrendingPosts from './pages/TrendingPosts'
 import NicheDiscovery from './pages/NicheDiscovery'
 import Improv from './pages/Improv'
+import ColorPalette from './pages/ColorPalette'
 import Home from './pages/Home'
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="trending-posts" element={<TrendingPosts />}   />
           <Route path="discover"       element={<NicheDiscovery />}   />
           <Route path="improv"         element={<Improv />}           />
+          <Route path="color-palette"  element={<ColorPalette />}     />
           <Route path="monetize"       element={<Monetize />}         />
           <Route path="posting-times"  element={<PostingTimes />}    />
           <Route path="currency"       element={<Currency />}         />

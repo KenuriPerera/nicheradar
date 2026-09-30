@@ -5,7 +5,7 @@ const headers = {
 }
 
 const BASE = () => process.env.SUPABASE_URL
-const KEY  = () => process.env.SUPABASE_PUBLISHABLE_KEY
+const KEY  = () => process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY
 
 function dbHeaders() {
   return {
@@ -28,7 +28,7 @@ const QUOTAS = {
 
 async function getOrCreateToday() {
   const url  = process.env.SUPABASE_URL
-  const key  = process.env.SUPABASE_PUBLISHABLE_KEY
+  const key  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY
   if (!url || !key) {
     console.log('Quota: Supabase env vars missing')
     return null
@@ -58,21 +58,33 @@ async function getOrCreateToday() {
     if (existing?.length > 0) return existing[0]
 
     // Create today's row
-    const createRes = await fetch(`${url}/rest/v1/api_usage`, {
+    let payload = {
+      date:        today,
+      youtube:     0,
+      newsapi:     0,
+      gemini:      0,
+      hackernews:  0,
+      supabase_mb: 0,
+      frankfurter: 0,
+      serpapi:     0,
+    }
+
+    let createRes = await fetch(`${url}/rest/v1/api_usage`, {
       method:  'POST',
       headers: h,
-      body: JSON.stringify({
-        date:        today,
-        youtube:     0,
-        newsapi:     0,
-        gemini:      0,
-        hackernews:  0,
-        supabase_mb: 0,
-        frankfurter: 0,
-        serpapi:     0,
-      }),
+      body:    JSON.stringify(payload),
     })
-    console.log('Quota CREATE status:', createRes.status)
+
+    if (!createRes.ok) {
+      // Fallback if serpapi column does not exist in Supabase table
+      delete payload.serpapi
+      createRes = await fetch(`${url}/rest/v1/api_usage`, {
+        method:  'POST',
+        headers: h,
+        body:    JSON.stringify(payload),
+      })
+    }
+
     if (!createRes.ok) {
       const err = await createRes.text()
       console.log('Quota CREATE error:', err)
@@ -119,26 +131,53 @@ export const handler = async (event) => {
 
   // GET — return current quota status
   const record = await getOrCreateToday()
-  const today  = new Date().toISOString().split('T')[0]
 
+  if (!record) {
+    // Return zeroed quotas if DB unavailable — still show the UI
+    const zeroStatus = Object.entries(QUOTAS).map(([key, q]) => ({
+      key,
+      label:     q.label,
+      total:     q.total,
+      used:      0,
+      left:      q.total,
+      pct:       0,
+      unit:      q.unit,
+      color:     q.color,
+      status:    'good',
+      unlimited: q.total === 99999,
+      resetIn:   q.resetHours < 720 ? 'midnight PT' : 'monthly',
+    }))
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        date:        new Date().toISOString().split('T')[0],
+        status:      zeroStatus,
+        dbAvailable: false,
+        fetchedAt:   new Date().toISOString(),
+      }),
+    }
+  }
+
+  const today  = new Date().toISOString().split('T')[0]
   const status = Object.entries(QUOTAS).map(([key, q]) => {
     const field = key === 'supabase' ? 'supabase_mb' : key
-    const used  = record?.[field] ?? 0
+    const used  = Number(record[field] ?? 0)
     const left  = Math.max(0, q.total - used)
-    const pct   = Math.min(100, Math.round((used / q.total) * 100))
+    const pct   = q.total === 99999 ? 0 : Math.min(100, Math.round((used / q.total) * 100))
 
     return {
       key,
-      label:   q.label,
-      total:   q.total,
+      label:     q.label,
+      total:     q.total,
       used,
       left,
       pct,
-      unit:    q.unit,
-      color:   q.color,
-      status:  pct >= 90 ? 'critical' : pct >= 70 ? 'warning' : 'good',
+      unit:      q.unit,
+      color:     q.color,
+      status:    pct >= 90 ? 'critical' : pct >= 70 ? 'warning' : 'good',
       unlimited: q.total === 99999,
-      resetIn: `${q.resetHours < 720 ? 'midnight PT' : 'monthly'}`,
+      resetIn:   q.resetHours < 720 ? 'midnight PT' : 'monthly',
     }
   })
 
@@ -146,9 +185,10 @@ export const handler = async (event) => {
     statusCode: 200,
     headers,
     body: JSON.stringify({
-      date:   today,
+      date:        today,
       status,
-      fetchedAt: new Date().toISOString(),
+      dbAvailable: true,
+      fetchedAt:   new Date().toISOString(),
     }),
   }
 }

@@ -1,5 +1,5 @@
 import {
-  fetchReddit, fetchYouTube,
+  fetchReddit, fetchYouTube, fetchYouTubeTrending,
   scoreNiche, extractHashtags, predictViralHashtags,
   NICHE_MAP, NICHE_KEYS
 } from './_data.js'
@@ -38,7 +38,7 @@ async function fetchNiche(niche) {
     const [redditData, ytVideos] = await Promise.race([
       Promise.all([
         fetchReddit(cfg.subreddits.slice(0, 1), 10),  // 1 subreddit, 10 posts
-        fetchYouTube(cfg.ytQueries.slice(0, 1), 4),   // 1 query, 4 videos
+        fetchYouTubeTrending(niche, 4),   // mostPopular (1 unit/vid instead of 100 search units)
       ]),
       timeout.then(() => { throw new Error('timeout') })
     ])

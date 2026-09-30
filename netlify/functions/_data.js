@@ -9,6 +9,83 @@ export function cors(res) {
   }
 }
 
+// YouTube category IDs per niche — costs only 1 unit per video vs 100 for search
+export const NICHE_YT_CATEGORIES = {
+  skincare:   '26',  // Howto & Style
+  movies:     '1',   // Film & Animation
+  books:      '27',  // Education
+  quotes:     '27',  // Education
+  fashion:    '26',  // Howto & Style
+  fitness:    '17',  // Sports
+  food:       '26',  // Howto & Style
+  travel:     '19',  // Travel & Events
+  tech:       '28',  // Science & Technology
+  wellness:   '26',  // Howto & Style
+  pets:       '15',  // Pets & Animals
+  gaming:     '20',  // Gaming
+  art:        '23',  // Comedy / Entertainment (closest)
+  finance:    '27',  // Education
+  reviews:    '26',  // Howto & Style
+  stationery: '26',  // Howto & Style
+}
+
+// Extra niche-specific sources with no key needed
+export const NICHE_EXTRA_SOURCES = {
+  tech:       { type: 'devto',      endpoint: 'https://dev.to/api/articles?per_page=10&top=7' },
+  gaming:     { type: 'fourchain',  endpoint: 'https://a.4cdn.org/v/threads.json' },
+  art:        { type: 'fourchain',  endpoint: 'https://a.4cdn.org/ic/threads.json' },
+  movies:     { type: 'tmdb',       endpoint: null }, // handled by fetchTMDB
+  books:      { type: 'openlibrary',endpoint: null }, // handled by fetchOpenLibrary
+  stationery: { type: 'fourchain',  endpoint: 'https://a.4cdn.org/diy/threads.json' },
+}
+
+export async function fetchTMDB(limit = 8) {
+  try {
+    const res = await fetch('https://api.themoviedb.org/3/trending/movie/week?api_key=e69622d1f9775f56e076df3a0c30628e', { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.results ?? []).slice(0, limit).map(m => ({
+      title: m.title,
+      popularity: m.popularity ?? 50,
+      rating: m.vote_average ?? 7,
+      upvote_ratio: (m.vote_average ?? 7) / 10,
+      url: `https://www.themoviedb.org/movie/${m.id}`,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function fetchOpenLibrary(subject = 'fiction', limit = 8) {
+  try {
+    const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(subject)}.json?limit=${limit}`, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.works ?? []).map(w => ({
+      title: w.title,
+      score: w.edition_count ?? 10,
+      url: `https://openlibrary.org${w.key}`,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function fetchITunes(term = 'podcast', media = 'podcast', limit = 8) {
+  try {
+    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=${media}&entity=podcast&limit=${limit}`, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.results ?? []).map(p => ({
+      title: p.collectionName || p.trackName,
+      genre: p.primaryGenreName,
+      url: p.collectionViewUrl || p.trackViewUrl,
+    }))
+  } catch {
+    return []
+  }
+}
+
 // ── Reddit ────────────────────────────────────────────────────────────────────
 export async function fetchReddit(subreddits, limit = 15) {
   const fetchSub = async (sub) => {
@@ -119,6 +196,33 @@ export async function fetchHackerNews(limit = 10) {
 }
 
 // ── YouTube (free data layer via official API key if available, else HTML search) ──
+export async function fetchYouTubeTrending(niche, maxResults = 10) {
+  const key = process.env.YOUTUBE_API_KEY
+  if (!key) return []
+  try {
+    // mostPopular costs 1 unit per video vs 100 for search
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&maxResults=${maxResults}&videoCategoryId=22&key=${key}`,
+      { signal: AbortSignal.timeout(5000) }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    if (data.error) {
+      console.log('YouTube trending error:', data.error.message)
+      return []
+    }
+    return (data.items ?? []).map(v => ({
+      title:     v.snippet.title,
+      channel:   v.snippet.channelTitle,
+      published: v.snippet.publishedAt,
+      videoId:   v.id,
+    }))
+  } catch (e) {
+    console.log('YouTube trending fetch error:', e.message)
+    return []
+  }
+}
+
 export async function fetchYouTube(queries, maxResults = 10) {
   const key = process.env.YOUTUBE_API_KEY
   const videos = []

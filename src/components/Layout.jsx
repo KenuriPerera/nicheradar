@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useLocation, Outlet } from 'react-router-dom'
 import {
   Radio, LayoutDashboard, Compass, Flame, Hash,
-  Search, BarChart2, Brain, Sparkles, Clock,
+  Search, BarChart2, Brain, Sparkles, Clock, Palette,
   PenTool, DollarSign, RefreshCw, History,
   ChevronDown, ChevronRight,
 } from 'lucide-react'
@@ -38,6 +38,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/improv',        icon: Sparkles, label: 'Improv'        },
       { to: '/posting-times', icon: Clock,    label: 'Posting Times' },
+      { to: '/color-palette', icon: Palette,  label: 'Color Palette' },
     ],
   },
   {

@@ -43,7 +43,14 @@ export default function TrendingPosts() {
           Trending Posts
         </h1>
         <p className="text-radar-muted text-sm mt-1">
-          Top performing posts, videos and soundtracks — live from Reddit and YouTube
+          Niche-matched content from YouTube, NewsAPI{' '}
+          {niche === 'tech' && '+ Dev.to'}
+          {niche === 'gaming' && '+ 4chan /v/'}
+          {niche === 'movies' && '+ TMDB'}
+          {niche === 'books' && '+ Open Library'}
+          {['wellness','fitness'].includes(niche) && '+ iTunes Podcasts'}
+          {niche === 'stationery' && '+ 4chan /diy/'}
+          {['finance','tech'].includes(niche) && ' + Hacker News'}
         </p>
       </div>
 
@@ -91,9 +98,9 @@ export default function TrendingPosts() {
           {/* Summary row */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Top post score',   value: data.summary.topPostScore.toLocaleString(),  icon: ThumbsUp,      color: 'text-radar-amber'  },
-              { label: 'Videos found',     value: data.topYouTubeVideos.length,                icon: Youtube,       color: 'text-red-400'      },
-              { label: 'Audio signals',    value: data.trendingAudio.length,                   icon: Music,         color: 'text-radar-accent' },
+              { label: 'Top post score',   value: (data.summary?.topPostScore ?? 0).toLocaleString(),  icon: ThumbsUp,      color: 'text-radar-amber'  },
+              { label: 'Videos found',     value: (data.topYouTubeVideos ?? []).length,                icon: Youtube,       color: 'text-red-400'      },
+              { label: 'Audio signals',    value: (data.trendingAudio ?? []).length,                   icon: Music,         color: 'text-radar-accent' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="card flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl bg-radar-border ${color}`}>
@@ -106,6 +113,25 @@ export default function TrendingPosts() {
               </div>
             ))}
           </div>
+
+          {/* Source breakdown */}
+          {data.sourceBreakdown && (
+            <div className="card flex flex-wrap gap-3 py-3 items-center">
+              <p className="text-xs text-radar-muted">Sources:</p>
+              {Object.entries(data.sourceBreakdown)
+                .filter(([, v]) => v)
+                .map(([k, v]) => (
+                  <span key={k} className="text-xs text-white bg-radar-bg border border-radar-border rounded-full px-2.5 py-1">
+                    {v}
+                  </span>
+                ))}
+              {data.fromCache && (
+                <span className="text-xs text-radar-amber border border-radar-amber/30 bg-radar-amber/10 rounded-full px-2.5 py-1">
+                  ⚡ YouTube from cache
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Tab switcher */}
           <div className="flex gap-2 border-b border-radar-border">
@@ -132,7 +158,7 @@ export default function TrendingPosts() {
               <p className="text-xs text-radar-muted">
                 Sorted by engagement score — upvotes × ratio + comments × 3 × recency decay
               </p>
-              {data.topRedditPosts.map((post, i) => {
+              {(data.topPosts ?? data.topRedditPosts ?? []).map((post, i) => {
                 const fs = FEED_STYLE[post.feed] ?? FEED_STYLE.hot
                 return (
                   <a key={post.url} href={post.url} target="_blank" rel="noopener noreferrer"

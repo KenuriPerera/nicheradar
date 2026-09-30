@@ -64,7 +64,7 @@ export const getPostingTimes = (platform) =>
   fetch(`/api/posting-times${platform ? `?platform=${platform}` : ''}`).then(handle)
 
 export const getCurrency = (base = 'USD') =>
-  fetch(`/api/currency?base=${base}`).then(handle)
+  fetch(`/api/currency?base=${base}&predict=true`).then(handle)
 
 export const getIntelligence = () =>
   fetch('/api/intelligence').then(handle)
@@ -176,4 +176,13 @@ export async function uploadToCloudinary(file, type = 'thumbnail') {
   const data = await res.json()
   return { url: data.secure_url, publicId: data.public_id }
 }
+
+export const getPalette = (action = 'generate', params = {}) => {
+  const q = new URLSearchParams({ action, ...params }).toString()
+  return fetch(`/api/color-palette?${q}`).then(handle)
+}
+
+export const getPrediction = () =>
+  fetch('/api/currency?base=USD&prediction=true').then(handle)
+
 

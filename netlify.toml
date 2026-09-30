@@ -55,3 +55,10 @@
 [functions."improv"]
   timeout = 26
 
+[functions."color-palette"]
+  timeout = 26
+
+[functions."currency"]
+  timeout = 26
+
+
