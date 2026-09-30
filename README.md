@@ -1,49 +1,45 @@
 # NicheRadar 🎯
-AI-powered viral trend intelligence for content creators.
-Track hashtags, analyze trends, find opportunities — all in one place.
 
-## Features
-- **Dashboard** — live viral scores across 15 niches
-- **Analyze** — deep hashtag and format analysis per niche
-- **Compare** — TikTok vs Instagram head-to-head
-- **Hashtags** — live extraction and viral prediction
-- **History** — trend tracking over time powered by Supabase
-- **Intelligence** — cross-niche momentum, signals and opportunities
-- **Content Analyzer** — Gemini AI video analysis with platform predictions
-- **Trending Posts** — top posts, videos and audio signals with direct links
-- **Monetize** — Ko-fi, Gumroad, Payhip strategies per niche
-- **Posting Times** — best times to post on TikTok, Instagram, YouTube, Pinterest
-- **Currency** — live exchange rates with LKR first
-- **Home** — features overview, API quota tracker and system health check
+A real-time trend intelligence and content discovery platform for digital creators, marketers, and researchers. Track emerging viral signals, analyze content formats, compare platform momentum, and uncover monetization opportunities.
+
+## Core Features
+- **Dashboard**
+- **Trend Analyzer**
+- **Platform Comparison**
+- **Hashtag Intelligence**
+- **Historical Analytics**
+- **Cross-Platform Intelligence**
+- **AI Content Analyzer**
+- **Trending Media & Signals**
+- **Monetization Insights**
+- **Posting Schedule Predictor**
+- **Global Currency Converter**
+- **API Quota & System Health Tracker**
 
 ## Tech Stack
-- **Frontend:** React + Vite + Tailwind CSS + Recharts + Lucide React
-- **Hosting:** Netlify free tier (serverless functions)
-- **Databases:** Supabase PostgreSQL (hashtag history) + MongoDB Atlas (data cache)
-- **AI:** Google Gemini 2.0 Flash (video analysis, 15 req/day free)
-- **Data Sources:** YouTube Data API v3, NewsAPI, Hacker News API
+- **Frontend:** React + Vite + Tailwind CSS + Recharts + Lucide Icons
+- **Backend:** Netlify Serverless Functions
+- **Databases:** Supabase PostgreSQL + MongoDB Atlas
+- **AI Engine:** Google Gemini AI
+- **Data Integrations:** YouTube Data API, NewsAPI, Hacker News, Dev.to, TMDB, Open Library, iTunes Podcasts, 4chan
 
-
-## Environment Variables Required
-See `.env.local.example` for the full list of required keys.
-**Never commit actual API keys to GitHub.**
+## Environment Variables
+Ensure all required environment keys are defined in your local environment file (`.env.local`). Refer to `.env.local.example` for the complete list of keys.
 
 ## Local Setup
 1. Clone the repository
-2. Copy `.env.local.example` to `.env.local`
-3. Fill in your API keys (see Data Sources table below)
-4. Run `npm install`
-5. Run `netlify dev`
-6. Open `http://localhost:8888`
+2. Copy `.env.local.example` to `.env.local` and populate keys
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the local development server:
+   ```bash
+   netlify dev
+   ```
+5. Open `http://localhost:8888`
 
 ## Deployment
-1. Create a free Netlify account at netlify.com
-2. Connect your GitHub repository
-3. Set Production visibility to **Public**
-4. Set Branch deploys to **None** and Deploy Previews to **None**
-5. Add all environment variables in Netlify dashboard
-6. Deploy — takes 2-3 minutes
-7. Visit `/api/migrate` once after deploy to create Supabase tables
-8. Lock auto-publishing to preserve build minutes
-
-
+1. Connect the repository to Netlify
+2. Configure required environment variables in the Netlify Dashboard
+3. Deploy build
