@@ -305,11 +305,13 @@ export default function MarketAnalyzer() {
           {fxRates && (
             <div className={clsx(
               'px-3 py-1.5 rounded-xl border flex items-center gap-2',
-              fxRates.isStale
+              (fxRates.source === 'placeholder (no live or saved rate)' || fxRates.isFallback || !fxRates.date)
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : fxRates.isStale
                 ? 'bg-radar-amber/10 border-radar-amber/30 text-radar-amber'
                 : 'bg-radar-card border-radar-border text-white'
             )}>
-              <Globe className="w-3.5 h-3.5 text-radar-green" />
+              <Globe className={clsx('w-3.5 h-3.5', (fxRates.source === 'placeholder (no live or saved rate)' || fxRates.isFallback || !fxRates.date) ? 'text-red-400' : 'text-radar-green')} />
               <span>1 USD = <strong>{fxRates.rates?.LKR || 320} LKR</strong></span>
               <span className="text-[10px] text-radar-muted font-mono">({fxRates.source})</span>
             </div>
@@ -317,13 +319,20 @@ export default function MarketAnalyzer() {
         </div>
       </div>
 
-      {/* ── Stale Rate Alert (If live fetch failed) ─────────────────────── */}
-      {fxRates?.isStale && (
+      {/* ── Stale / Fallback Rate Alert ─────────────────────────────────── */}
+      {(fxRates?.source === 'placeholder (no live or saved rate)' || fxRates?.isFallback || (!fxRates?.date && fxRates?.isStale)) ? (
+        <div className="card border-red-500/40 bg-red-500/5 p-3 flex items-center gap-3 text-xs">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <p className="text-red-300">
+            <strong>Warning:</strong> Live exchange rate and cached rates are unavailable. Using hard-coded placeholder rate (1 USD = {fxRates.rates?.LKR || 320} LKR). Currency conversions may be inaccurate. Configure a manual override in Settings if needed.
+          </p>
+        </div>
+      ) : fxRates?.isStale && (
         <div className="card border-radar-amber/40 bg-radar-amber/5 p-3 flex items-center gap-3 text-xs">
           <AlertTriangle className="w-4 h-4 text-radar-amber flex-shrink-0" />
           <p className="text-radar-amber">
             <strong>Notice:</strong> Live exchange rate fetch unavailable. Using stored rate from{' '}
-            <span className="font-mono">{fxRates.date}</span>. Configure manual override in Settings if needed.
+            <span className="font-mono">{fxRates.date || 'unknown'}</span>. Configure manual override in Settings if needed.
           </p>
         </div>
       )}

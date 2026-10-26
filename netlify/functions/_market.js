@@ -220,9 +220,10 @@ export async function getFXRates() {
   if (!baseRateInfo) {
     baseRateInfo = {
       rates: { USD: 1, LKR: 320, EUR: 0.92, GBP: 0.78, AUD: 1.5, CAD: 1.35 },
-      date: new Date().toISOString().split('T')[0],
-      source: 'system default',
+      date: null,
+      source: 'placeholder (no live or saved rate)',
       isStale: true,
+      isFallback: true,
     }
   }
 
