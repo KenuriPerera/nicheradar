@@ -61,4 +61,18 @@
 [functions."currency"]
   timeout = 26
 
+[functions."cliptube-scan"]
+  timeout = 26
+
+[functions."cliptube-ai"]
+  timeout = 26
+
+[functions."cliptube-data"]
+  timeout = 26
+
+[functions."market-analyzer"]
+  timeout = 26
+
+
+
 

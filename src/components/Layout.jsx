@@ -4,7 +4,7 @@ import {
   Radio, LayoutDashboard, Compass, Flame, Hash,
   Search, BarChart2, Brain, Sparkles, Clock, Palette,
   PenTool, DollarSign, RefreshCw, History,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Clapperboard, Store,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -28,9 +28,10 @@ const NAV_GROUPS = [
   {
     label: 'Analytics',
     items: [
-      { to: '/analyze',      icon: Search,    label: 'Analyze'      },
-      { to: '/compare',      icon: BarChart2, label: 'Compare'      },
-      { to: '/intelligence', icon: Brain,    label: 'Intelligence' },
+      { to: '/analyze',         icon: Search,    label: 'Analyze'         },
+      { to: '/compare',         icon: BarChart2, label: 'Compare'         },
+      { to: '/intelligence',    icon: Brain,     label: 'Intelligence'    },
+      { to: '/market-analyzer', icon: Store,     label: 'Market Analyzer' },
     ],
   },
   {
@@ -47,6 +48,12 @@ const NAV_GROUPS = [
       { to: '/stationery', icon: PenTool,    label: 'Stationery Market' },
       { to: '/monetize',   icon: DollarSign, label: 'Monetize'          },
       { to: '/currency',   icon: RefreshCw,  label: 'Currency'          },
+    ],
+  },
+  {
+    label: 'ClipTube',
+    items: [
+      { to: '/cliptube', icon: Clapperboard, label: 'ClipTube' },
     ],
   },
   {
